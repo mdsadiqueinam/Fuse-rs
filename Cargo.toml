@@ -1,0 +1,8 @@
+[package]
+name = "fuse-rs"
+version = "0.1.0"
+edition = "2024"
+authors = ["Md Sadique Inam <md.sadique32@gmail.com>"]
+
+[dependencies]
+serde_json = "1.0.93"
