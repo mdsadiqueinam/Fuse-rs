@@ -68,7 +68,7 @@ impl Get for &str {
     }
 }
 
-pub fn get<T: Get>(obj: &Value, path: T) -> Option<GetValue> {
+pub fn get<T: Get>(obj: &Value, path: &T) -> Option<GetValue> {
     path.get(obj)
 }
 
@@ -102,35 +102,35 @@ mod tests {
         });
 
         let path = vec!["author".to_string(), "name".to_string()];
-        let result = super::get(&obj, path);
+        let result = super::get(&obj, &path);
         match result {
             Some(super::GetValue::String(s)) => assert_eq!(s, "John Scalzi".to_string()),
             _ => panic!("Expected a string"),
         }
 
         let path = vec!["author".to_string(), "age".to_string()];
-        let result = super::get(&obj, path);
+        let result = super::get(&obj, &path);
         match result {
             Some(super::GetValue::String(s)) => assert_eq!(s, "18".to_string()),
             _ => panic!("Expected a string"),
         }
 
         let path = "author.name";
-        let result = super::get(&obj, path);
+        let result = super::get(&obj, &path);
         match result {
             Some(super::GetValue::String(s)) => assert_eq!(s, "John Scalzi".to_string()),
             _ => panic!("Expected a string"),
         }
 
         let path = vec!["author".to_string(), "tags".to_string(), "value".to_string()];
-        let result = super::get(&obj, path);
+        let result = super::get(&obj, &path);
         match result {
             Some(super::GetValue::Array(arr)) => assert_eq!(arr, vec!["American".to_string(), "sci-fi".to_string()]),
             _ => panic!("Expected an array"),
         }
-        
+
         let path = vec!["author".to_string(), "tags".to_string(), "nested".to_string(), "value".to_string()];
-        let result = super::get(&obj, path);
+        let result = super::get(&obj, &path);
         match result {
             Some(super::GetValue::Array(arr)) => assert_eq!(arr, vec!["nested test 1".to_string(), "nested test 2".to_string()]),
             _ => panic!("Expected an array"),
