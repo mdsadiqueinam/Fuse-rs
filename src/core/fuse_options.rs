@@ -4,6 +4,7 @@ use serde_json::Value;
 use std::borrow::Cow;
 
 /// Default sort function for search results
+#[inline]
 fn default_sort_fn(a: &SearchResult, b: &SearchResult) -> i8 {
     if (a.score - b.score).abs() < f64::EPSILON {
         if a.idx < b.idx { -1 } else { 1 }
@@ -17,7 +18,6 @@ fn default_sort_fn_wrapper() -> fn(&SearchResult, &SearchResult) -> i8 {
     default_sort_fn
 }
 
-/// Wrapper for default_get_fn to satisfy Serde's default attribute
 fn default_get_fn_wrapper() -> fn(&Value, &Vec<String>) -> Option<get::GetValue> {
     get::get
 }
@@ -32,7 +32,7 @@ pub type FuseKeyValueGetter = Option<fn(&Value) -> &str>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FuseOptionKeyObject<'a> {
-    pub name: FuseOptionKeyName<'a>,
+    pub name: Cow<'a, FuseOptionKeyName<'a>>, // Use Cow to avoid cloning
     pub weight: Option<f64>,
 
     #[serde(skip)]
@@ -49,12 +49,12 @@ pub enum FuseOptionKey<'a> {
 
 impl<'a> Default for FuseOptionKey<'a> {
     fn default() -> Self {
-        FuseOptionKey::StringArray(Vec::new())
+        Self::StringArray(Vec::new())
     }
 }
 
 /// Represents a search result item
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SearchResult {
     pub score: f64,
     pub idx: usize,
@@ -63,40 +63,51 @@ pub struct SearchResult {
 /// Configuration options for Fuse.js
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FuseOptions<'a> {
-    // BasicOptions
+    #[serde(default)]
     pub is_case_sensitive: bool,
+    #[serde(default)]
     pub ignore_diacritics: bool,
+    #[serde(default)]
     pub include_score: bool,
+    #[serde(default)]
     pub keys: FuseOptionKey<'a>,
+    #[serde(default)]
     pub should_sort: bool,
 
     #[serde(skip, default = "default_sort_fn_wrapper")]
     pub sort_fn: fn(&SearchResult, &SearchResult) -> i8,
 
-    // MatchOptions
+    #[serde(default)]
     pub include_matches: bool,
+    #[serde(default)]
     pub find_all_matches: bool,
+    #[serde(default)]
     pub min_match_char_length: usize,
 
-    // FuzzyOptions
+    #[serde(default)]
     pub location: usize,
+    #[serde(default)]
     pub threshold: f64,
+    #[serde(default)]
     pub distance: usize,
 
-    // AdvancedOptions
+    #[serde(default)]
     pub use_extended_search: bool,
 
     #[serde(skip, default = "default_get_fn_wrapper")]
     pub get_fn: fn(&Value, &Vec<String>) -> Option<get::GetValue>,
 
+    #[serde(default)]
     pub ignore_location: bool,
+    #[serde(default)]
     pub ignore_field_norm: bool,
+    #[serde(default)]
     pub field_norm_weight: usize,
 }
 
 impl<'a> Default for FuseOptions<'a> {
     fn default() -> Self {
-        FuseOptions {
+        Self {
             is_case_sensitive: false,
             ignore_diacritics: false,
             include_score: false,
