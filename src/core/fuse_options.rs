@@ -1,22 +1,9 @@
-use crate::helpers::get;
+use crate::helpers::get::{self, GetFn};
+use crate::core::types::{FuseSortFunction, default_sort_fn, default_sort_fn_wrapper};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::borrow::Cow;
 
-/// Default sort function for search results
-#[inline]
-fn default_sort_fn(a: &SearchResult, b: &SearchResult) -> i8 {
-    if (a.score - b.score).abs() < f64::EPSILON {
-        if a.idx < b.idx { -1 } else { 1 }
-    } else {
-        if a.score < b.score { -1 } else { 1 }
-    }
-}
-
-/// Wrapper for default_sort_fn to satisfy Serde's default attribute
-fn default_sort_fn_wrapper() -> fn(&SearchResult, &SearchResult) -> i8 {
-    default_sort_fn
-}
 
 fn default_get_fn_wrapper() -> fn(&Value, &Vec<String>) -> Option<get::GetValue> {
     get::get
@@ -75,7 +62,7 @@ pub struct FuseOptions<'a> {
     pub should_sort: bool,
 
     #[serde(skip, default = "default_sort_fn_wrapper")]
-    pub sort_fn: fn(&SearchResult, &SearchResult) -> i8,
+    pub sort_fn: FuseSortFunction,
 
     #[serde(default)]
     pub include_matches: bool,
@@ -95,7 +82,7 @@ pub struct FuseOptions<'a> {
     pub use_extended_search: bool,
 
     #[serde(skip, default = "default_get_fn_wrapper")]
-    pub get_fn: fn(&Value, &Vec<String>) -> Option<get::GetValue>,
+    pub get_fn: GetFn<Vec<String>>,
 
     #[serde(default)]
     pub ignore_location: bool,

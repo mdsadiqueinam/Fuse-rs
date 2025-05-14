@@ -68,6 +68,8 @@ impl Get for &str {
     }
 }
 
+pub type GetFn<T> = fn(&Value, &T) -> Option<GetValue>;
+
 pub fn get<T: Get>(obj: &Value, path: &T) -> Option<GetValue> {
     path.get(obj)
 }

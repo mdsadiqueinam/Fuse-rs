@@ -1,3 +1,4 @@
-pub(crate) mod fuse_options;
-pub(crate) mod compute_score;
-pub(crate) mod fuse;
+pub mod fuse_options;
+pub mod compute_score;
+pub mod fuse;
+pub mod types;
