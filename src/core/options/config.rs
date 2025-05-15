@@ -32,9 +32,9 @@ pub struct FuseOptions<'a> {
     pub include_score: bool,
     
     /// The keys (properties) in the items to search. This can be:
-    /// - A single string key
-    /// - An array of string keys
-    /// - A key object with name and weight
+    /// - A single string key array
+    /// - An array of string keys array
+    /// - A key object with name and weight array
     /// Default: empty array
     #[serde(default)]
     pub keys: Vec<FuseOptionKey<'a>>,
