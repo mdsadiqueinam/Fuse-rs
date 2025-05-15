@@ -1,5 +1,5 @@
 use serde_json::Value;
-use crate::core::fuse_options::FuseOptions;
+use crate::core::options::config::FuseOptions;
 
 pub struct Fuse<'a> {
     // The options for the Fuse instance
@@ -18,7 +18,7 @@ impl<'a> Fuse<'a> {
     }
 
     /// Searches the data using the provided search term
-    pub fn search(&self, term: &str) -> Vec<Value> {
+    pub fn search(&self, _term: &str) -> Vec<Value> {
         // TODO: Implement actual fuzzy search logic
         // Currently returns an empty vector as a placeholder
         vec![]
