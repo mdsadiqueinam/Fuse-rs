@@ -1,4 +1,6 @@
 use serde_json::Value;
+use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 pub enum GetValue {
     String(String),
@@ -68,10 +70,27 @@ impl Get for &str {
     }
 }
 
-pub type GetFn<T> = fn(&Value, &T) -> Option<GetValue>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GetFnPath<'a> {
+    /// A single string representing a key name
+    String(Cow<'a, str>),
+    /// An array of strings representing nested path components
+    StringArray(Vec<Cow<'a, str>>),
+}
 
-pub fn get<T: Get>(obj: &Value, path: &T) -> Option<GetValue> {
-    path.get(obj)
+pub type GetFn = fn(&Value, &GetFnPath) -> Option<GetValue>;
+
+pub fn get(obj: &Value, path: &GetFnPath) -> Option<GetValue> {
+    match path {
+        GetFnPath::String(s) => {
+            let path_str: &str = s.as_ref();
+            <&str as Get>::get(&path_str, obj)
+        }
+        GetFnPath::StringArray(arr) => {
+            let path_vec: Vec<String> = arr.iter().map(|s| s.to_string()).collect();
+            <Vec<String> as Get>::get(&path_vec, obj)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -103,35 +122,35 @@ mod tests {
             }
         });
 
-        let path = vec!["author".to_string(), "name".to_string()];
+        let path = super::GetFnPath::StringArray(vec!["author".into(), "name".into()]);
         let result = super::get(&obj, &path);
         match result {
             Some(super::GetValue::String(s)) => assert_eq!(s, "John Scalzi".to_string()),
             _ => panic!("Expected a string"),
         }
 
-        let path = vec!["author".to_string(), "age".to_string()];
+        let path = super::GetFnPath::StringArray(vec!["author".into(), "age".into()]);
         let result = super::get(&obj, &path);
         match result {
             Some(super::GetValue::String(s)) => assert_eq!(s, "18".to_string()),
             _ => panic!("Expected a string"),
         }
 
-        let path = "author.name";
+        let path = super::GetFnPath::String("author.name".into());
         let result = super::get(&obj, &path);
         match result {
             Some(super::GetValue::String(s)) => assert_eq!(s, "John Scalzi".to_string()),
             _ => panic!("Expected a string"),
         }
 
-        let path = vec!["author".to_string(), "tags".to_string(), "value".to_string()];
+        let path = super::GetFnPath::StringArray(vec!["author".into(), "tags".into(), "value".into()]);
         let result = super::get(&obj, &path);
         match result {
             Some(super::GetValue::Array(arr)) => assert_eq!(arr, vec!["American".to_string(), "sci-fi".to_string()]),
             _ => panic!("Expected an array"),
         }
 
-        let path = vec!["author".to_string(), "tags".to_string(), "nested".to_string(), "value".to_string()];
+        let path = super::GetFnPath::StringArray(vec!["author".into(), "tags".into(), "nested".into(), "value".into()]);
         let result = super::get(&obj, &path);
         match result {
             Some(super::GetValue::Array(arr)) => assert_eq!(arr, vec!["nested test 1".to_string(), "nested test 2".to_string()]),

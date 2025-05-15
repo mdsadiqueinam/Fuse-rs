@@ -1,6 +1,6 @@
 use crate::core::options::keys::FuseOptionKey;
 use crate::core::options::sort::{FuseSortFunction, default_sort_fn, default_sort_fn_wrapper};
-use crate::helpers::get::{self, GetFn};
+use crate::helpers::get::{self, GetFn, GetFnPath};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cmp::max;
@@ -9,7 +9,7 @@ use std::cmp::max;
 ///
 /// This returns the default getter function from the `get` module
 /// which can access properties by path from a JSON value.
-fn default_get_fn_wrapper() -> fn(&Value, &Vec<String>) -> Option<get::GetValue> {
+fn default_get_fn_wrapper() -> fn(&Value, &GetFnPath) -> Option<get::GetValue> {
     get::get
 }
 
@@ -82,7 +82,7 @@ pub struct FuseOptions<'a> {
     /// Function used to retrieve a value from an item for comparison.
     /// Default: Basic property accessor function
     #[serde(skip, default = "default_get_fn_wrapper")]
-    pub get_fn: GetFn<Vec<String>>,
+    pub get_fn: GetFn,
 
     /// When `true`, search will ignore `location` and `distance`. Default: `false`
     #[serde(default)]
