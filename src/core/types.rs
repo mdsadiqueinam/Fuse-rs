@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde_json::Value;
 
 /// Represents a nested value for sorted items
 #[derive(Debug, Clone, Serialize, Deserialize)]
