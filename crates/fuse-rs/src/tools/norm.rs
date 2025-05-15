@@ -36,6 +36,7 @@ lazy_static! {
 /// // let value = "hello world";
 /// // let norm_factor = normalizer.get(value);
 /// ```
+#[derive(Debug)]
 pub struct Norm {
     /// Influence weight of field length (higher = more influence)
     weight: f64,

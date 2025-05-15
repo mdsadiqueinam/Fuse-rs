@@ -50,6 +50,14 @@ pub fn get(obj: &Value, path: &GetFnPath) -> Option<GetValue> {
     }
 }
 
+/// Default wrapper function for the `get_fn` field
+///
+/// This returns the default getter function from the `get` module
+/// which can access properties by path from a JSON value.
+pub fn default_get_fn_wrapper() -> fn(&Value, &GetFnPath) -> Option<GetValue> {
+    get
+}
+
 //----------------------------------------------------------------------
 // Implementation details
 //----------------------------------------------------------------------
