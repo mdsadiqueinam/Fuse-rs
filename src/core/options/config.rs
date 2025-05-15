@@ -37,7 +37,7 @@ pub struct FuseOptions<'a> {
     /// - A key object with name and weight
     /// Default: empty array
     #[serde(default)]
-    pub keys: FuseOptionKey<'a>,
+    pub keys: Vec<FuseOptionKey<'a>>,
     
     /// When `true`, the matching results will be sorted by score. Default: `true`
     #[serde(default)]
@@ -103,7 +103,7 @@ impl<'a> Default for FuseOptions<'a> {
             is_case_sensitive: false,
             ignore_diacritics: false,
             include_score: false,
-            keys: FuseOptionKey::default(),
+            keys: Vec::new(),
             should_sort: true,
             sort_fn: default_sort_fn,
             include_matches: false,
