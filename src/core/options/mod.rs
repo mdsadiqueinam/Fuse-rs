@@ -1,5 +1,13 @@
-pub mod keys;
-pub mod sort;
-pub mod config;
+//! Configuration options for the fuzzy search engine
+//!
+//! This module contains types and utilities for configuring the search behavior,
+//! including key definitions, sorting functions, and general options.
 
-// No re-exports here - direct imports from specific modules are used instead
+// Key type definitions and handlers
+pub mod keys;
+
+// Sort function types and implementations
+pub mod sort;
+
+// Main configuration options
+pub mod config;

@@ -3,37 +3,64 @@ use std::collections::HashMap;
 use serde::Serialize;
 use crate::core::options::keys::{FuseOptionKey, FuseOptionKeyName, FuseOptionKeyObject, FuseKeyValueGetter};
 
+//----------------------------------------------------------------------
+// Key and KeyStore Implementation
+//----------------------------------------------------------------------
+
 /// A key object representing a searchable field within a document.
 /// 
-/// Corresponds to the object returned by `createKey()` in the original JavaScript implementation.
+/// Each Key represents a specific path or field in the document data
+/// that should be searched and scored during the fuzzy search process.
+/// 
+/// # Example
+/// 
+/// ```
+/// // Internally created from FuseOptionKey definitions
+/// // Example path: ["author", "name"]
+/// // Example id: "author.name"
+/// ```
 #[derive(Debug, Clone, Serialize)]
 pub struct Key<'a> {
-    /// The dot-separated path to the field in the object.
+    /// The field path components to access the data
     pub path: Vec<String>,
 
-    /// A unique identifier for the key, derived from joining the path with dots.
+    /// A unique identifier for the key (dot-joined path)
     pub id: String,
 
-    /// The weight of the key, used during scoring. Normalized in `KeyStore`.
+    /// The weight of the key for scoring calculations (normalized)
     pub weight: f64,
 
-    /// The original source string or path from which the key was created.
+    /// The original source path from which the key was created
     pub src: Cow<'a, str>,
 
-    /// Optional function to retrieve the value from the target document.
+    /// Function to retrieve values from the target document
     #[serde(skip)]
     pub get_fn: FuseKeyValueGetter,
 }
 
-/// A container and manager for a collection of `Key` objects.
+/// A container and manager for a collection of searchable `Key` objects.
 /// 
-/// Provides indexing, normalization, and serialization functionality.
+/// The `KeyStore` handles normalization of key weights, provides lookup by ID,
+/// and manages serialization of the key collection.
+///
+/// # Example
+///
+/// ```ignore
+/// // This is internal API, not meant to be used directly
+/// // Code shown for illustration purposes only
+/// 
+/// // Creating a KeyStore from option keys (normally done internally)
+/// let option_keys = vec![
+///     /* Key definitions */
+/// ];
+/// // let key_store = KeyStore::new(&option_keys);
+/// ```
 #[derive(Debug, Clone, Serialize)]
 pub struct KeyStore<'a> {
-    /// Internal vector holding all the key objects.
+    /// All searchable keys in the collection
     keys: Vec<Key<'a>>,
 
-    /// Lookup map from key ID to the key object.
+    /// Fast lookup map from key ID to the key object
     #[serde(skip)]
     key_map: HashMap<String, Key<'a>>,
 }

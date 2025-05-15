@@ -5,6 +5,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cmp::max;
 
+//----------------------------------------------------------------------
+// Helpers
+//----------------------------------------------------------------------
+
 /// Default wrapper function for the `get_fn` field
 ///
 /// This returns the default getter function from the `get` module
@@ -13,10 +17,27 @@ fn default_get_fn_wrapper() -> fn(&Value, &GetFnPath) -> Option<get::GetValue> {
     get::get
 }
 
-/// Configuration options for Fuse.js, a powerful fuzzy-search library
+//----------------------------------------------------------------------
+// Configuration Options
+//----------------------------------------------------------------------
+
+/// Configuration options for the fuzzy-search library
 /// 
 /// `FuseOptions` controls the behavior of the fuzzy search algorithm, allowing
 /// fine-grained control over matching behavior, result formatting, and performance.
+///
+/// # Example
+///
+/// ```rust
+/// use fuse_rs::FuseOptions;
+///
+/// let options = FuseOptions {
+///     is_case_sensitive: false,
+///     include_score: true,
+///     should_sort: true,
+///     ..Default::default()
+/// };
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FuseOptions<'a> {
     /// When `true`, the search becomes case-sensitive. Default: `false`
