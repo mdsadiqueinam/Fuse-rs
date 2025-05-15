@@ -10,3 +10,4 @@ unicode-normalization = "0.1.24"
 regex = "1.11.1"
 serde = { version = "1.0.219", features = ["derive"] }
 derivative = "2.2"
+lazy_static = "1.5.0"
