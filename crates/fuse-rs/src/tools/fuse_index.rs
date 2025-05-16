@@ -270,7 +270,7 @@ impl<'a> FuseIndex<'a> {
     ///
     /// A new `FuseIndex` instance with the pre-computed index data.
     pub fn parse_index(
-        data: (Vec<Key<'_>>, FuseIndexRecords),
+        data: (Vec<Key<'a>>, FuseIndexRecords),
         get_fn: Option<GetFn>,
         field_norm_weight: Option<f64>,
     ) -> Self {
@@ -584,5 +584,255 @@ mod tests {
         if let FuseIndexRecord::String(record) = &index.records[2] {
             assert_eq!(record.v, "three");
         }
+    }
+    
+    #[test]
+    fn test_create_index() {
+        // Define test keys for searching
+        let keys = vec![
+            FuseOptionKey::String("title".into()),
+            FuseOptionKey::String("author".into()),
+        ];
+        
+        // Create test documents
+        let docs = vec![
+            json!({
+                "title": "The Great Gatsby",
+                "author": "F. Scott Fitzgerald"
+            }),
+            json!({
+                "title": "To Kill a Mockingbird",
+                "author": "Harper Lee"
+            }),
+            json!({
+                "title": "1984",
+                "author": "George Orwell"
+            }),
+        ];
+        
+        // Custom field_norm_weight for testing
+        let field_norm_weight = 2.0;
+        
+        // Create index with the test data
+        let index = FuseIndex::create_index(&keys, &docs, None, Some(field_norm_weight));
+        
+        // Verify the index was created correctly
+        assert_eq!(index.size(), 3);
+        assert_eq!(index.keys.len(), 2);
+        
+        // Check that the keys were converted and stored properly
+        assert_eq!(index.keys[0].id, "title");
+        assert_eq!(index.keys[1].id, "author");
+        
+        // Verify the keys map was created correctly
+        assert!(index.keys_map.contains_key("title"));
+        assert!(index.keys_map.contains_key("author"));
+        
+        // We can't directly access norm.weight as it's private
+        // Instead, verify the index was created with documents
+        
+        // Check one of the records to ensure documents were indexed
+        if let FuseIndexRecord::Object(record) = &index.records[0] {
+            // Check that both fields were indexed
+            assert!(record.entries.contains_key("0")); // title
+            assert!(record.entries.contains_key("1")); // author
+            
+            // Verify title value for first document
+            if let RecordEntryValue::Single(title_value) = &record.entries.get("0").unwrap() {
+                assert_eq!(title_value.v, "The Great Gatsby");
+                assert!(title_value.n > 0.0); // Norm should be calculated
+            } else {
+                panic!("Expected Single value for title");
+            }
+        } else {
+            panic!("Expected object record");
+        }
+    }
+    
+    #[test]
+    fn test_parse_index() {
+        // Create keys for the test
+        let keys = vec![
+            Key {
+                path: vec!["title".to_string()],
+                id: "title".to_string(),
+                weight: 1.0,
+                src: "title".into(),
+                get_fn: None,
+            },
+            Key {
+                path: vec!["author".to_string()],
+                id: "author".to_string(),
+                weight: 1.0,
+                src: "author".into(),
+                get_fn: None,
+            },
+        ];
+        
+        // Create mock records for testing
+        let mut records = FuseIndexRecords::new();
+        
+        // Add a string record
+        let string_record = FuseIndexStringRecord::new(0, "test string".to_string(), 1.0);
+        records.add_string(string_record);
+        
+        // Add an object record
+        let mut object_record = FuseIndexObjectRecord::new(1);
+        
+        // Add title entry
+        object_record.entries.insert(
+            "0".to_string(),
+            RecordEntryValue::Single(IndexValue {
+                v: "The Great Gatsby".to_string(),
+                n: 1.0,
+                i: None,
+            }),
+        );
+        
+        // Add author entry
+        object_record.entries.insert(
+            "1".to_string(),
+            RecordEntryValue::Single(IndexValue {
+                v: "F. Scott Fitzgerald".to_string(),
+                n: 1.0,
+                i: None,
+            }),
+        );
+        
+        records.add_object(object_record);
+        
+        // Custom field_norm_weight for testing
+        let field_norm_weight = 2.0;
+        
+        // Parse the data into a new index
+        let index = FuseIndex::parse_index((keys.clone(), records), None, Some(field_norm_weight));
+        
+        // Verify the index was parsed correctly
+        assert_eq!(index.size(), 2); // One string record and one object record
+        assert_eq!(index.keys.len(), 2);
+        
+        // Check keys were stored properly
+        assert_eq!(index.keys[0].id, "title");
+        assert_eq!(index.keys[1].id, "author");
+        
+        // Verify keys map was created
+        assert!(index.keys_map.contains_key("title"));
+        assert!(index.keys_map.contains_key("author"));
+        
+        // We can't directly access norm.weight as it's private
+        // Instead, verify the records were properly stored
+        
+        // Check the records were stored properly
+        if let FuseIndexRecord::String(record) = &index.records[0] {
+            assert_eq!(record.i, 0);
+            assert_eq!(record.v, "test string");
+            assert_eq!(record.n, 1.0);
+        } else {
+            panic!("Expected string record");
+        }
+        
+        if let FuseIndexRecord::Object(record) = &index.records[1] {
+            assert_eq!(record.i, 1);
+            
+            // Check title field
+            if let RecordEntryValue::Single(title) = &record.entries.get("0").unwrap() {
+                assert_eq!(title.v, "The Great Gatsby");
+                assert_eq!(title.n, 1.0);
+            } else {
+                panic!("Expected Single value for title");
+            }
+            
+            // Check author field
+            if let RecordEntryValue::Single(author) = &record.entries.get("1").unwrap() {
+                assert_eq!(author.v, "F. Scott Fitzgerald");
+                assert_eq!(author.n, 1.0);
+            } else {
+                panic!("Expected Single value for author");
+            }
+        } else {
+            panic!("Expected object record");
+        }
+    }
+    
+    #[test]
+    fn test_create_index_with_custom_get_fn() {
+        // Define a custom get_fn that transforms values to uppercase
+        let custom_get_fn: GetFn = |doc, path| {
+            let default_fn = FuseOptions::default().get_fn;
+            if let Some(GetValue::String(value)) = default_fn(doc, path) {
+                Some(GetValue::String(value.to_uppercase()))
+            } else {
+                default_fn(doc, path)
+            }
+        };
+        
+        // Define test keys
+        let keys = vec![FuseOptionKey::String("title".into())];
+        
+        // Create test document
+        let docs = vec![json!({"title": "test title"})];
+        
+        // Create index with custom get_fn
+        let index = FuseIndex::create_index(&keys, &docs, Some(custom_get_fn), None);
+        
+        // Verify the document was indexed with uppercase transformation
+        if let FuseIndexRecord::Object(record) = &index.records[0] {
+            if let RecordEntryValue::Single(title) = &record.entries.get("0").unwrap() {
+                assert_eq!(title.v, "TEST TITLE"); // Should be uppercase
+            } else {
+                panic!("Expected Single value for title");
+            }
+        } else {
+            panic!("Expected object record");
+        }
+    }
+    
+    #[test]
+    fn test_parse_index_with_custom_get_fn() {
+        // Define a custom get_fn for testing
+        let custom_get_fn: GetFn = |doc, path| {
+            let default_fn = FuseOptions::default().get_fn;
+            if let Some(GetValue::String(value)) = default_fn(doc, path) {
+                Some(GetValue::String(value.to_uppercase()))
+            } else {
+                default_fn(doc, path)
+            }
+        };
+        
+        // Create keys
+        let keys = vec![
+            Key {
+                path: vec!["title".to_string()],
+                id: "title".to_string(),
+                weight: 1.0,
+                src: "title".into(),
+                get_fn: None,
+            },
+        ];
+        
+        // Create mock records
+        let mut records = FuseIndexRecords::new();
+        let mut object_record = FuseIndexObjectRecord::new(0);
+        
+        object_record.entries.insert(
+            "0".to_string(),
+            RecordEntryValue::Single(IndexValue {
+                v: "test title".to_string(),
+                n: 1.0,
+                i: None,
+            }),
+        );
+        
+        records.add_object(object_record);
+        
+        // Parse index with custom get_fn
+        let index = FuseIndex::parse_index((keys, records), Some(custom_get_fn), None);
+        
+        // Verify the index was created successfully
+        assert_eq!(index.size(), 1);
+        
+        // We can't reliably test function pointer equality with closures in Rust
+        // Instead, we'll just verify the index was created successfully with the right structure
+        // In a real application, we'd test the actual search functionality to verify get_fn works
     }
 }
