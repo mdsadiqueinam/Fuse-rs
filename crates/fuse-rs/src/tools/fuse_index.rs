@@ -219,8 +219,293 @@ impl<'a> FuseIndex<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::core::options::config::FuseOptions;
+    use crate::core::options::keys::FuseOptionKey;
+    use serde_json::json;
+
     #[test]
     fn test_index_creation() {
-        // TODO: Implement tests when the actual index is implemented
+        let options = FuseOptions::default();
+        let index = FuseIndex::new(&options);
+        
+        assert_eq!(index.size(), 0);
+        assert!(index.keys.is_empty());
+        assert!(index.keys_map.is_empty());
+    }
+    
+    #[test]
+    fn test_add_string() {
+        let options = FuseOptions::default();
+        let mut index = FuseIndex::new(&options);
+        
+        // Add a string document
+        let doc = json!("test string");
+        index.add(&doc);
+        
+        // Verify the document was added
+        assert_eq!(index.size(), 1);
+        
+        // Verify we have the right record type
+        if let FuseIndexRecord::String(record) = &index.records[0] {
+            assert_eq!(record.i, 0); // Index should be 0
+            assert_eq!(record.v, "test string"); // Value should be stored
+            assert!(record.n > 0.0); // Norm should be calculated
+        } else {
+            panic!("Expected string record");
+        }
+        
+        // Test empty string is not added
+        let empty_doc = json!("");
+        index.add(&empty_doc);
+        assert_eq!(index.size(), 1); // Size shouldn't change
+    }
+    
+    #[test]
+    fn test_add_object() {
+        let mut options = FuseOptions::default();
+        
+        // Set up keys for indexing
+        options.keys = vec![
+            FuseOptionKey::String("title".into()),
+            FuseOptionKey::String("author".into()),
+        ];
+        
+        let mut index = FuseIndex::new(&options);
+        index.set_keys(vec![
+            Key {
+                path: vec!["title".to_string()],
+                id: "title".to_string(),
+                weight: 1.0,
+                src: "title".into(),
+                get_fn: None,
+            },
+            Key {
+                path: vec!["author".to_string()],
+                id: "author".to_string(),
+                weight: 1.0,
+                src: "author".into(),
+                get_fn: None,
+            },
+        ]);
+        
+        // Add an object document
+        let doc = json!({
+            "title": "The Great Gatsby",
+            "author": "F. Scott Fitzgerald"
+        });
+        index.add(&doc);
+        
+        // Verify the document was added
+        assert_eq!(index.size(), 1);
+        
+        // Verify we have the right record type with both fields
+        if let FuseIndexRecord::Object(record) = &index.records[0] {
+            assert_eq!(record.i, 0); // Index should be 0
+            assert_eq!(record.entries.len(), 2); // Should have two entries
+            
+            // Check title field
+            if let RecordEntryValue::Single(title_value) = &record.entries.get("0").unwrap() {
+                assert_eq!(title_value.v, "The Great Gatsby");
+                assert!(title_value.n > 0.0);
+            } else {
+                panic!("Title should be a Single value");
+            }
+            
+            // Check author field
+            if let RecordEntryValue::Single(author_value) = &record.entries.get("1").unwrap() {
+                assert_eq!(author_value.v, "F. Scott Fitzgerald");
+                assert!(author_value.n > 0.0);
+            } else {
+                panic!("Author should be a Single value");
+            }
+        } else {
+            panic!("Expected object record");
+        }
+    }
+    
+    #[test]
+    fn test_add_object_with_array() {
+        let mut options = FuseOptions::default();
+        
+        // Set up keys for indexing
+        options.keys = vec![
+            FuseOptionKey::String("title".into()),
+            FuseOptionKey::String("tags".into()),
+        ];
+        
+        let mut index = FuseIndex::new(&options);
+        index.set_keys(vec![
+            Key {
+                path: vec!["title".to_string()],
+                id: "title".to_string(),
+                weight: 1.0,
+                src: "title".into(),
+                get_fn: None,
+            },
+            Key {
+                path: vec!["tags".to_string()],
+                id: "tags".to_string(),
+                weight: 1.0,
+                src: "tags".into(),
+                get_fn: None,
+            },
+        ]);
+        
+        // Add an object document with an array field
+        let doc = json!({
+            "title": "Programming in Rust",
+            "tags": ["programming", "rust", "systems"]
+        });
+        index.add(&doc);
+        
+        // Verify the document was added
+        assert_eq!(index.size(), 1);
+        
+        // Verify we have the right record type
+        if let FuseIndexRecord::Object(record) = &index.records[0] {
+            // Check tags field has array values
+            if let RecordEntryValue::Array(tags) = &record.entries.get("1").unwrap() {
+                assert_eq!(tags.len(), 3);
+                
+                // Check all tags were indexed with their correct indices
+                let tags_values: Vec<&str> = tags.iter().map(|t| t.v.as_str()).collect();
+                assert!(tags_values.contains(&"programming"));
+                assert!(tags_values.contains(&"rust"));
+                assert!(tags_values.contains(&"systems"));
+                
+                // Check indices are preserved
+                for tag in tags {
+                    assert!(tag.i.is_some());
+                }
+            } else {
+                panic!("Tags should be an Array value");
+            }
+        } else {
+            panic!("Expected object record");
+        }
+    }
+    
+    #[test]
+    fn test_remove_at() {
+        let options = FuseOptions::default();
+        let mut index = FuseIndex::new(&options);
+        
+        // Add multiple string documents
+        index.add(&json!("first"));
+        index.add(&json!("second"));
+        index.add(&json!("third"));
+        
+        assert_eq!(index.size(), 3);
+        
+        // Remove the middle document
+        index.remove_at(1);
+        
+        // Check size decreased
+        assert_eq!(index.size(), 2);
+        
+        // Check indices were updated
+        if let FuseIndexRecord::String(first) = &index.records[0] {
+            assert_eq!(first.i, 0);
+            assert_eq!(first.v, "first");
+        }
+        
+        if let FuseIndexRecord::String(third) = &index.records[1] {
+            assert_eq!(third.i, 1); // Index should be decremented
+            assert_eq!(third.v, "third");
+        }
+    }
+    
+    #[test]
+    fn test_get_value_for_item_at_key_id() {
+        let mut options = FuseOptions::default();
+        
+        // Set up keys for indexing
+        options.keys = vec![
+            FuseOptionKey::String("title".into()),
+            FuseOptionKey::String("author".into()),
+        ];
+        
+        let mut index = FuseIndex::new(&options);
+        index.set_keys(vec![
+            Key {
+                path: vec!["title".to_string()],
+                id: "title".to_string(),
+                weight: 1.0,
+                src: "title".into(),
+                get_fn: None,
+            },
+            Key {
+                path: vec!["author".to_string()],
+                id: "author".to_string(),
+                weight: 1.0,
+                src: "author".into(),
+                get_fn: None,
+            },
+        ]);
+        
+        // Add an object document
+        index.add(&json!({
+            "title": "The Great Gatsby",
+            "author": "F. Scott Fitzgerald"
+        }));
+        
+        // Get the record entry
+        if let FuseIndexRecord::Object(record) = &index.records[0] {
+            // Try to get values by key ID
+            let title_value = index.get_value_for_item_at_key_id(&record.entries, "title");
+            let author_value = index.get_value_for_item_at_key_id(&record.entries, "author");
+            let nonexistent = index.get_value_for_item_at_key_id(&record.entries, "nonexistent");
+            
+            assert!(title_value.is_some());
+            assert!(author_value.is_some());
+            assert!(nonexistent.is_none());
+            
+            // Verify values are correct
+            if let RecordEntryValue::Single(title) = title_value.unwrap() {
+                assert_eq!(title.v, "The Great Gatsby");
+            } else {
+                panic!("Expected Single value for title");
+            }
+            
+            if let RecordEntryValue::Single(author) = author_value.unwrap() {
+                assert_eq!(author.v, "F. Scott Fitzgerald");
+            } else {
+                panic!("Expected Single value for author");
+            }
+        }
+    }
+    
+    #[test]
+    fn test_set_source() {
+        let options = FuseOptions::default();
+        let mut index = FuseIndex::new(&options);
+        
+        // Add initial documents
+        index.add(&json!("initial"));
+        assert_eq!(index.size(), 1);
+        
+        // Set new source, which should replace existing documents
+        let new_source = vec![
+            json!("one"),
+            json!("two"),
+            json!("three")
+        ];
+        
+        index.set_source(new_source);
+        
+        // Check new size
+        assert_eq!(index.size(), 3);
+        
+        // Verify new documents were indexed
+        if let FuseIndexRecord::String(record) = &index.records[0] {
+            assert_eq!(record.v, "one");
+        }
+        if let FuseIndexRecord::String(record) = &index.records[1] {
+            assert_eq!(record.v, "two");
+        }
+        if let FuseIndexRecord::String(record) = &index.records[2] {
+            assert_eq!(record.v, "three");
+        }
     }
 }
