@@ -158,7 +158,7 @@ mod tests {
                         }
                     },
                     {
-                        "value": "sci-fi",
+                        "value": ["sci-fi", "space"],
                         "nested": {
                             "value": "nested test 2"
                         }
@@ -215,7 +215,7 @@ mod tests {
         let path = GetFnPath::StringArray(vec!["author".into(), "tags".into(), "value".into()]);
         let result = get(&obj, &path);
         match result {
-            Some(GetValue::Array(arr)) => assert_eq!(arr, vec!["American".to_string(), "sci-fi".to_string()]),
+            Some(GetValue::Array(arr)) => assert_eq!(arr, vec!["American".to_string(), "sci-fi".to_string(), "space".to_string()]),
             _ => panic!("Expected an array"),
         }
     }

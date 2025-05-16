@@ -120,7 +120,35 @@ impl<'a> FuseIndex<'a> {
                         record.entries.insert(keyIndex.to_string(), entry);
                     }
                     GetValue::Array(arr) => {
+                        let mut sub_records = Vec::new();
+                        let mut stack = Vec::new();
                         
+                        // Initialize stack with all array elements (with their indices)
+                        for (k, item) in arr.iter().enumerate() {
+                            stack.push((k, item.clone()));
+                        }
+                        
+                        // Process the stack
+                        while let Some((nested_arr_index, value)) = stack.pop() {
+                            // Skip empty values
+                            if value.is_empty() {
+                                continue;
+                            }
+                            
+                            // Process string values
+                            let norm = self.norm.get(&value);
+                            let sub_record = IndexValue {
+                                v: value,
+                                n: norm,
+                                i: Some(nested_arr_index),
+                            };
+                            sub_records.push(sub_record);
+                        }
+                        
+                        if !sub_records.is_empty() {
+                            let entry = RecordEntryValue::Array(sub_records);
+                            record.entries.insert(keyIndex.to_string(), entry);
+                        }
                     }
                 }
             } else {
