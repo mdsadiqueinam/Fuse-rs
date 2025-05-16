@@ -1,0 +1,30 @@
+{
+  "name": "fuse-rs-wasm",
+  "version": "0.1.0",
+  "description": "WebAssembly bindings for fuse-rs fuzzy search library",
+  "main": "dist/fuse_wasm.js",
+  "module": "dist/fuse_wasm.js",
+  "types": "dist/fuse_wasm.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "wasm-pack build --target web --out-dir dist --out-name fuse_wasm .",
+    "build:node": "wasm-pack build --target nodejs --out-dir dist/node --out-name fuse_wasm .",
+    "build:bundler": "wasm-pack build --target bundler --out-dir dist/bundler --out-name fuse_wasm .",
+    "test": "wasm-pack test --node"
+  },
+  "keywords": [
+    "fuzzy-search",
+    "search",
+    "fuse",
+    "wasm",
+    "webassembly"
+  ],
+  "author": "Md Sadique Inam <md.sadique32@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mdsadiqueinam/fuse-rs"
+  }
+}

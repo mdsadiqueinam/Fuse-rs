@@ -50,6 +50,14 @@ pub fn get(obj: &Value, path: &GetFnPath) -> Option<GetValue> {
     }
 }
 
+/// Default wrapper function for the `get_fn` field
+///
+/// This returns the default getter function from the `get` module
+/// which can access properties by path from a JSON value.
+pub fn default_get_fn_wrapper() -> fn(&Value, &GetFnPath) -> Option<GetValue> {
+    get
+}
+
 //----------------------------------------------------------------------
 // Implementation details
 //----------------------------------------------------------------------
@@ -150,7 +158,7 @@ mod tests {
                         }
                     },
                     {
-                        "value": "sci-fi",
+                        "value": ["sci-fi", "space"],
                         "nested": {
                             "value": "nested test 2"
                         }
@@ -207,7 +215,7 @@ mod tests {
         let path = GetFnPath::StringArray(vec!["author".into(), "tags".into(), "value".into()]);
         let result = get(&obj, &path);
         match result {
-            Some(GetValue::Array(arr)) => assert_eq!(arr, vec!["American".to_string(), "sci-fi".to_string()]),
+            Some(GetValue::Array(arr)) => assert_eq!(arr, vec!["American".to_string(), "sci-fi".to_string(), "space".to_string()]),
             _ => panic!("Expected an array"),
         }
     }

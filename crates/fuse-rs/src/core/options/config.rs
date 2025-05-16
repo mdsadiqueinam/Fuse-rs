@@ -1,21 +1,12 @@
 use crate::core::options::keys::FuseOptionKey;
 use crate::core::options::sort::{FuseSortFunction, default_sort_fn, default_sort_fn_wrapper};
-use crate::helpers::get::{self, GetFn, GetFnPath};
+use crate::helpers::get::{self, GetFn, default_get_fn_wrapper};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::cmp::max;
 
 //----------------------------------------------------------------------
 // Helpers
 //----------------------------------------------------------------------
-
-/// Default wrapper function for the `get_fn` field
-///
-/// This returns the default getter function from the `get` module
-/// which can access properties by path from a JSON value.
-fn default_get_fn_wrapper() -> fn(&Value, &GetFnPath) -> Option<get::GetValue> {
-    get::get
-}
 
 //----------------------------------------------------------------------
 // Configuration Options
@@ -115,7 +106,7 @@ pub struct FuseOptions<'a> {
     
     /// Determines the importance of field length normalization. Default: `1`
     #[serde(default)]
-    pub field_norm_weight: usize,
+    pub field_norm_weight: f64,
 }
 
 impl<'a> Default for FuseOptions<'a> {
@@ -137,7 +128,7 @@ impl<'a> Default for FuseOptions<'a> {
             get_fn: get::get,
             ignore_location: false,
             ignore_field_norm: false,
-            field_norm_weight: 1,
+            field_norm_weight: 1.0,
         }
     }
 }
@@ -162,7 +153,7 @@ impl<'a> FuseOptions<'a> {
         self.distance = max(self.distance, 0);
         
         // Ensure field_norm_weight is at least 1
-        self.field_norm_weight = max(self.field_norm_weight, 1);
+        self.field_norm_weight = self.field_norm_weight.max(1.0);
         
         self
     }

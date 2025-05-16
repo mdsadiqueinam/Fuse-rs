@@ -1,0 +1,29 @@
+{
+  "name": "fuse-rs-node",
+  "version": "0.1.0",
+  "description": "Node.js bindings for fuse-rs fuzzy search library",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
+    "build-release": "cargo-cp-artifact -nc index.node -- cargo build --release --message-format=json-render-diagnostics",
+    "install": "npm run build-release",
+    "test": "cargo test"
+  },
+  "keywords": [
+    "fuzzy-search",
+    "search",
+    "fuse",
+    "neon",
+    "rust"
+  ],
+  "author": "Md Sadique Inam <md.sadique32@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "cargo-cp-artifact": "^0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mdsadiqueinam/fuse-rs"
+  }
+}

@@ -1,10 +1,18 @@
 # Code Organization in fuse-rs
 
-This document describes the overall organization and structure of the fuse-rs library.
+This document describes the overall organization and structure of the fuse-rs project.
 
-## Project Structure
+## Workspace Structure
 
-The library is organized into several key modules:
+The project is organized as a Rust workspace with multiple crates:
+
+- **fuse-rs**: Core library implementing the fuzzy search functionality
+- **fuse-wasm**: WebAssembly bindings for using the library in web browsers
+- **fuse-node**: Node.js bindings for using the library in Node.js applications
+
+## Core Library Structure
+
+The core `fuse-rs` library is organized into several key modules:
 
 - **core**: Main functionality of the fuzzy search engine
   - **fuse**: Primary search implementation
@@ -90,3 +98,5 @@ Areas that could benefit from future improvement:
 - Implementation of the full fuzzy search algorithm
 - More comprehensive indexing for better performance
 - Additional test coverage for edge cases
+- Expand WebAssembly and Node.js bindings functionality
+- Add more examples for different use cases
