@@ -9,7 +9,8 @@ use std::collections::HashMap;
 use serde_json::Value;
 
 use super::fuse_index_record::{
-    FuseIndexObjectRecord, FuseIndexRecords, FuseIndexRecordsVecExt, FuseIndexStringRecord, IndexValue, RecordEntry, RecordEntryValue
+    FuseIndexObjectRecord, FuseIndexRecords, FuseIndexRecordsVecExt, FuseIndexStringRecord,
+    IndexValue, RecordEntry, RecordEntryValue,
 };
 use super::key_store::Key;
 use super::norm::Norm;
@@ -31,9 +32,7 @@ const DEFAULT_NGRAM_SIZE: usize = 3;
 pub struct FuseIndex<'a> {
     norm: Norm,
     get_fn: GetFn,
-    is_created: bool,
     records: FuseIndexRecords,
-    docs: Vec<Value>,
     keys: Vec<Key<'a>>,
     keys_map: HashMap<String, usize>,
 }
@@ -47,16 +46,19 @@ impl<'a> FuseIndex<'a> {
         FuseIndex {
             norm: Norm::new(options.field_norm_weight, 3),
             get_fn: options.get_fn,
-            is_created: false,
             records: FuseIndexRecords::new(),
-            docs: Vec::new(),
             keys: Vec::new(),
             keys_map: HashMap::new(),
         }
     }
 
     pub fn set_source(&mut self, source: Vec<Value>) {
-        self.docs = source;
+        // Clear existing records and documents
+        self.records.clear();
+
+        source.iter().for_each(|doc| {
+            self.add(doc);
+        });
     }
 
     pub fn set_index_records(&mut self, records: FuseIndexRecords) {
@@ -74,7 +76,8 @@ impl<'a> FuseIndex<'a> {
     }
 
     fn add(&mut self, doc: &Value) {
-        let idx = self.docs.len();
+        // add a new record at the end of the records
+        let idx = self.records.len();
 
         if doc.is_string() {
             self.add_string(doc, idx);
@@ -98,65 +101,95 @@ impl<'a> FuseIndex<'a> {
     fn add_object(&mut self, doc: &Value, idx: usize) {
         let mut record = FuseIndexObjectRecord::new(idx);
 
-        self.keys.iter().enumerate().for_each(|(keyIndex, key)| {
-            let get_value = if let Some(get_fn) = key.get_fn {
-                Some(GetValue::String(get_fn(doc).to_string()))
-            } else {
-                let path: Vec<Cow<'_, str>> =
-                    key.path.iter().map(|s| Cow::Borrowed(s.as_str())).collect();
-                let get_fn_path = GetFnPath::StringArray(path);
-                (self.get_fn)(doc, &get_fn_path)
-            };
+        self.keys.iter().enumerate().for_each(|(key_index, key)| {
+            let get_value = self.get_value_for_key(doc, key);
 
             if let Some(value) = get_value {
                 match value {
                     GetValue::String(s) => {
-                        let norm = self.norm.get(&s);
-                        let entry = RecordEntryValue::Single(IndexValue {
-                            v: s,
-                            n: norm,
-                            i: None,
-                        });
-                        record.entries.insert(keyIndex.to_string(), entry);
+                        self.process_string_value(s, key_index, &mut record);
                     }
                     GetValue::Array(arr) => {
-                        let mut sub_records = Vec::new();
-                        let mut stack = Vec::new();
-                        
-                        // Initialize stack with all array elements (with their indices)
-                        for (k, item) in arr.iter().enumerate() {
-                            stack.push((k, item.clone()));
-                        }
-                        
-                        // Process the stack
-                        while let Some((nested_arr_index, value)) = stack.pop() {
-                            // Skip empty values
-                            if value.is_empty() {
-                                continue;
-                            }
-                            
-                            // Process string values
-                            let norm = self.norm.get(&value);
-                            let sub_record = IndexValue {
-                                v: value,
-                                n: norm,
-                                i: Some(nested_arr_index),
-                            };
-                            sub_records.push(sub_record);
-                        }
-                        
-                        if !sub_records.is_empty() {
-                            let entry = RecordEntryValue::Array(sub_records);
-                            record.entries.insert(keyIndex.to_string(), entry);
-                        }
+                        self.process_array_value(arr, key_index, &mut record);
                     }
                 }
-            } else {
-                return;
             }
         });
 
         self.records.add_object(record);
+    }
+
+    /// Get the value for a specific key from a document
+    fn get_value_for_key(&self, doc: &Value, key: &Key) -> Option<GetValue> {
+        if let Some(get_fn) = key.get_fn {
+            Some(GetValue::String(get_fn(doc).to_string()))
+        } else {
+            let path: Vec<Cow<'_, str>> =
+                key.path.iter().map(|s| Cow::Borrowed(s.as_str())).collect();
+            let get_fn_path = GetFnPath::StringArray(path);
+            (self.get_fn)(doc, &get_fn_path)
+        }
+    }
+
+    /// Process a single string value and add it to the record
+    fn process_string_value(
+        &self,
+        s: String,
+        key_index: usize,
+        record: &mut FuseIndexObjectRecord,
+    ) {
+        let norm = self.norm.get(&s);
+        let entry = RecordEntryValue::Single(IndexValue {
+            v: s,
+            n: norm,
+            i: None,
+        });
+        record.entries.insert(key_index.to_string(), entry);
+    }
+
+    /// Process an array of values and add them to the record
+    fn process_array_value(
+        &self,
+        arr: Vec<String>,
+        key_index: usize,
+        record: &mut FuseIndexObjectRecord,
+    ) {
+        let sub_records = self.collect_sub_records(arr);
+
+        if !sub_records.is_empty() {
+            let entry = RecordEntryValue::Array(sub_records);
+            record.entries.insert(key_index.to_string(), entry);
+        }
+    }
+
+    /// Collect sub-records from an array of values
+    fn collect_sub_records(&self, arr: Vec<String>) -> Vec<IndexValue> {
+        let mut sub_records = Vec::new();
+        let mut stack = Vec::new();
+
+        // Initialize stack with all array elements (with their indices)
+        for (k, item) in arr.iter().enumerate() {
+            stack.push((k, item.clone()));
+        }
+
+        // Process the stack
+        while let Some((nested_arr_index, value)) = stack.pop() {
+            // Skip empty values
+            if value.is_empty() {
+                continue;
+            }
+
+            // Process string values
+            let norm = self.norm.get(&value);
+            let sub_record = IndexValue {
+                v: value,
+                n: norm,
+                i: Some(nested_arr_index),
+            };
+            sub_records.push(sub_record);
+        }
+
+        sub_records
     }
 }
 
