@@ -167,3 +167,23 @@ pub enum FuseIndexRecord {
 /// This can be either a collection of object records or string records,
 /// but not a mix of both types.
 pub type FuseIndexRecords = Vec<FuseIndexRecord>;
+
+/// Extension trait for adding records to a FuseIndexRecords vector.
+pub trait FuseIndexRecordsVecExt {
+    /// Adds a string record to the collection. Returns a mutable reference for chaining.
+    fn add_string(&mut self, record: FuseIndexStringRecord) -> &mut Self;
+    /// Adds an object record to the collection. Returns a mutable reference for chaining.
+    fn add_object(&mut self, record: FuseIndexObjectRecord) -> &mut Self;
+}
+
+impl FuseIndexRecordsVecExt for FuseIndexRecords {
+    fn add_string(&mut self, record: FuseIndexStringRecord) -> &mut Self {
+        self.push(FuseIndexRecord::String(record));
+        self
+    }
+    
+    fn add_object(&mut self, record: FuseIndexObjectRecord) -> &mut Self {
+        self.push(FuseIndexRecord::Object(record));
+        self
+    }
+}
