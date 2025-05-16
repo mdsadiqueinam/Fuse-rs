@@ -9,10 +9,11 @@ use std::collections::HashMap;
 use serde_json::Value;
 
 use super::fuse_index_record::*;
-use super::key_store::Key;
+use super::key_store::{Key, create_key};
 use super::norm::Norm;
 use crate::helpers::get::{GetFnPath, GetValue};
 use crate::{FuseOptions, helpers::get::GetFn};
+use crate::core::options::keys::FuseOptionKey;
 
 //----------------------------------------------------------------------
 // Types & Constants
@@ -214,6 +215,82 @@ impl<'a> FuseIndex<'a> {
 
     fn size(&self) -> usize {
         self.records.len()
+    }
+
+    /// Creates a new FuseIndex from keys and docs with optional configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `keys` - A slice of `FuseOptionKey` which define the fields to search in the documents.
+    /// * `docs` - A slice of `Value` representing the documents to index.
+    /// * `get_fn` - Optional function for getting values from documents (defaults to options' get_fn).
+    /// * `field_norm_weight` - Optional field normalization weight (defaults to options' field_norm_weight).
+    ///
+    /// # Returns
+    ///
+    /// A new `FuseIndex` instance with the documents indexed.
+    pub fn create_index(
+        keys: &[FuseOptionKey<'a>],
+        docs: &[Value],
+        get_fn: Option<GetFn>,
+        field_norm_weight: Option<f64>,
+    ) -> Self {
+        let mut options = FuseOptions::default();
+        
+        if let Some(get_fn_value) = get_fn {
+            options.get_fn = get_fn_value;
+        }
+        
+        if let Some(weight) = field_norm_weight {
+            options.field_norm_weight = weight;
+        }
+        
+        let mut index = FuseIndex::new(&options);
+        
+        // Create keys using the key_store's create_key function
+        let keys_vec: Vec<Key> = keys.iter().map(|k| create_key(k)).collect();
+        index.set_keys(keys_vec);
+        
+        // Set the documents to be indexed
+        let docs_vec = docs.to_vec();
+        index.set_source(docs_vec);
+        
+        index
+    }
+
+    /// Parses an existing index data structure into a FuseIndex instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The pre-computed index records to use.
+    /// * `get_fn` - Optional function for getting values from documents (defaults to options' get_fn).
+    /// * `field_norm_weight` - Optional field normalization weight (defaults to options' field_norm_weight).
+    ///
+    /// # Returns
+    ///
+    /// A new `FuseIndex` instance with the pre-computed index data.
+    pub fn parse_index(
+        data: (Vec<Key<'_>>, FuseIndexRecords),
+        get_fn: Option<GetFn>,
+        field_norm_weight: Option<f64>,
+    ) -> Self {
+        let mut options = FuseOptions::default();
+        
+        if let Some(get_fn_value) = get_fn {
+            options.get_fn = get_fn_value;
+        }
+        
+        if let Some(weight) = field_norm_weight {
+            options.field_norm_weight = weight;
+        }
+        
+        let mut index = FuseIndex::new(&options);
+        
+        let (keys, records) = data;
+        index.set_keys(keys);
+        index.set_index_records(records);
+        
+        index
     }
 }
 

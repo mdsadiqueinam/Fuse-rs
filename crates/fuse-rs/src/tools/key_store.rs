@@ -129,7 +129,7 @@ impl<'a> KeyStore<'a> {
 /// # Returns
 ///
 /// A `Key` instance with parsed and derived metadata.
-fn create_key<'a>(key: &FuseOptionKey<'a>) -> Key<'a> {
+pub fn create_key<'a>(key: &FuseOptionKey<'a>) -> Key<'a> {
     let (src, path): (Cow<str>, Vec<String>);
     let mut weight = 1.0;
     let mut get_fn = None;
