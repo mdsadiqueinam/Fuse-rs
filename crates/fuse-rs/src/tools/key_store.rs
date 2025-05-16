@@ -45,16 +45,6 @@ pub struct Key<'a> {
 ///
 /// # Example
 ///
-/// ```ignore
-/// // This is internal API, not meant to be used directly
-/// // Code shown for illustration purposes only
-/// 
-/// // Creating a KeyStore from option keys (normally done internally)
-/// let option_keys = vec![
-///     /* Key definitions */
-/// ];
-/// // let key_store = KeyStore::new(&option_keys);
-/// ```
 #[derive(Debug, Clone, Serialize)]
 pub struct KeyStore<'a> {
     /// All searchable keys in the collection
