@@ -83,7 +83,7 @@ impl<'a> FuseIndex<'a> {
         }
     }
 
-    pub fn removeAt(&mut self, idx: usize) {
+    pub fn remove_at(&mut self, idx: usize) {
         // Remove the record at the specified index
         self.records.remove(idx);
 
@@ -128,6 +128,15 @@ impl<'a> FuseIndex<'a> {
         });
 
         self.records.add_object(record);
+    }
+
+    /// Get the number of records in the index
+    pub fn get_value_for_item_at_key_id(&self, item: &RecordEntry, key_id: &str) -> Option<RecordEntryValue> {
+        if let Some(key_index) = self.keys_map.get(key_id) {
+            item.get(&key_index.to_string()).cloned()
+        } else {
+            None
+        }
     }
 
     /// Get the value for a specific key from a document
