@@ -8,10 +8,7 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
-use super::fuse_index_record::{
-    FuseIndexObjectRecord, FuseIndexRecords, FuseIndexRecordsVecExt, FuseIndexStringRecord,
-    IndexValue, RecordEntry, RecordEntryValue,
-};
+use super::fuse_index_record::*;
 use super::key_store::Key;
 use super::norm::Norm;
 use crate::helpers::get::{GetFnPath, GetValue};
@@ -75,14 +72,28 @@ impl<'a> FuseIndex<'a> {
             .collect();
     }
 
-    fn add(&mut self, doc: &Value) {
+    pub fn add(&mut self, doc: &Value) {
         // add a new record at the end of the records
-        let idx = self.records.len();
+        let idx = self.size();
 
         if doc.is_string() {
             self.add_string(doc, idx);
         } else {
             self.add_object(doc, idx);
+        }
+    }
+
+    pub fn removeAt(&mut self, idx: usize) {
+        // Remove the record at the specified index
+        self.records.remove(idx);
+
+        // Update the index of all records after the removed index
+        for i in idx..self.size() {
+            let record = self.records.get_mut(i).unwrap();
+            match record {
+                FuseIndexRecord::String(r) => r.i -= 1,
+                FuseIndexRecord::Object(r) => r.i -= 1,
+            };
         }
     }
 
@@ -190,6 +201,10 @@ impl<'a> FuseIndex<'a> {
         }
 
         sub_records
+    }
+
+    fn size(&self) -> usize {
+        self.records.len()
     }
 }
 
