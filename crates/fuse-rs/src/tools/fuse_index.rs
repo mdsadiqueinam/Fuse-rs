@@ -248,7 +248,10 @@ impl<'a> FuseIndex<'a> {
         let mut index = FuseIndex::new(&options);
         
         // Create keys using the key_store's create_key function
-        let keys_vec: Vec<Key> = keys.iter().map(|k| create_key(k)).collect();
+        // Handle the Result by unwrapping or panicking with error message
+        let keys_vec: Vec<Key> = keys.iter()
+            .map(|k| create_key(k).unwrap_or_else(|e| panic!("{}", e)))
+            .collect();
         index.set_keys(keys_vec);
         
         // Set the documents to be indexed

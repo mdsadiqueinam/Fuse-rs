@@ -24,6 +24,9 @@ pub use crate::core::options::config::FuseOptions;
 pub use crate::core::options::keys::FuseOptionKey;
 pub use crate::core::options::sort::FuseSortFunction;
 
+// Error types
+pub use crate::core::error_messages::FuseError;
+
 // Search results
 pub use crate::core::results::search_result::{
     RangeTuple,

@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use serde::Serialize;
 use crate::core::options::keys::{FuseOptionKey, FuseOptionKeyName, FuseOptionKeyObject, FuseKeyValueGetter};
+use crate::core::error_messages::FuseError;
 
 //----------------------------------------------------------------------
 // Key and KeyStore Implementation
@@ -66,13 +67,19 @@ impl<'a> KeyStore<'a> {
     ///
     /// # Panics
     ///
-    /// Panics if any provided key object has a weight less than or equal to zero.
+    /// Panics if any provided key object fails validation, such as having a weight less than or equal to zero.
     pub fn new(keys: &[FuseOptionKey<'a>]) -> Self {
         let mut raw_keys: Vec<Key<'a>> = Vec::with_capacity(keys.len());
         let mut total_weight = 0.0;
 
         for key in keys {
-            let key_obj = create_key(key);
+            // Create a key and unwrap the Result
+            // This will panic with the appropriate error message if validation fails
+            let key_obj = match create_key(key) {
+                Ok(key) => key,
+                Err(e) => panic!("{}", e),
+            };
+            
             total_weight += key_obj.weight;
             raw_keys.push(key_obj);
         }
@@ -129,7 +136,11 @@ impl<'a> KeyStore<'a> {
 /// # Returns
 ///
 /// A `Key` instance with parsed and derived metadata.
-pub fn create_key<'a>(key: &FuseOptionKey<'a>) -> Key<'a> {
+///
+/// # Returns
+///
+/// A `Result<Key, FuseError>` containing the created key or an error if validation fails.
+pub fn create_key<'a>(key: &FuseOptionKey<'a>) -> Result<Key<'a>, FuseError> {
     let (src, path): (Cow<str>, Vec<String>);
     let mut weight = 1.0;
     let mut get_fn = None;
@@ -144,12 +155,20 @@ pub fn create_key<'a>(key: &FuseOptionKey<'a>) -> Key<'a> {
             src = Cow::Owned(path.join("."));
         },
         FuseOptionKey::KeyObject(obj) => {
+            // Check if the name property exists
+            if obj.name.is_empty() {
+                return Err(FuseError::MissingKeyProperty("name".to_string()));
+            }
+            
             match &*obj.name {
                 FuseOptionKeyName::String(name) => {
                     src = name.clone();
                     path = create_key_path(name);
                 },
                 FuseOptionKeyName::StringArray(arr) => {
+                    if arr.is_empty() {
+                        return Err(FuseError::MissingKeyProperty("name.path".to_string()));
+                    }
                     path = arr.iter().map(|s| s.to_string()).collect();
                     src = Cow::Owned(path.join("."));
                 }
@@ -157,7 +176,7 @@ pub fn create_key<'a>(key: &FuseOptionKey<'a>) -> Key<'a> {
 
             if let Some(w) = obj.weight {
                 if w <= 0.0 {
-                    panic!("Invalid weight ({}) for key: '{}'", w, path.join("."));
+                    return Err(FuseError::InvalidKeyWeightValue(path.join(".")));
                 }
                 weight = w;
             }
@@ -168,7 +187,7 @@ pub fn create_key<'a>(key: &FuseOptionKey<'a>) -> Key<'a> {
 
     let id = create_key_id(&path);
 
-    Key { path, id, weight, src, get_fn }
+    Ok(Key { path, id, weight, src, get_fn })
 }
 
 /// Converts a dotted key string into a vector of path components.
