@@ -1,14 +1,17 @@
-use std::collections::HashMap;
-use crate::FuseOptions;
 use crate::FuseError;
+use crate::FuseOptions;
+use std::collections::HashMap;
+use std::usize::MAX;
+
+use super::constants::MAX_BITS;
 
 pub struct SearchResult {
     /// Whether the pattern was found in the text
     pub is_match: bool,
-    
+
     /// The match quality score (lower is better)
     pub score: f64,
-    
+
     /// List of match position ranges as (start, end) tuples
     pub indices: Vec<(usize, usize)>,
 }
@@ -20,12 +23,10 @@ pub fn search(
     options: &FuseOptions,
 ) -> Result<SearchResult, FuseError> {
     // Check pattern length against maximum allowed
-    if let Some(max_pattern_length) = options.max_pattern_length {
-        if pattern.len() > max_pattern_length {
-            return Err(FuseError::PatternLengthTooLarge(max_pattern_length));
-        }
+    if pattern.len() > MAX_BITS {
+        return Err(FuseError::PatternLengthTooLarge(MAX_BITS));
     }
-    
+
     // TODO: Implement actual bitmap-based search
     // This is a placeholder that returns an empty result
     Ok(SearchResult {

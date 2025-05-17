@@ -107,11 +107,6 @@ pub struct FuseOptions<'a> {
     /// Determines the importance of field length normalization. Default: `1`
     #[serde(default)]
     pub field_norm_weight: f64,
-    
-    /// Maximum pattern length. If the pattern exceeds this length, a PatternLengthTooLarge error is returned.
-    /// Default: `None` (no limit)
-    #[serde(default)]
-    pub max_pattern_length: Option<usize>,
 }
 
 impl<'a> Default for FuseOptions<'a> {
@@ -133,8 +128,7 @@ impl<'a> Default for FuseOptions<'a> {
             get_fn: get::get,
             ignore_location: false,
             ignore_field_norm: false,
-            field_norm_weight: 1.0,
-            max_pattern_length: None,
+            field_norm_weight: 1.0
         }
     }
 }

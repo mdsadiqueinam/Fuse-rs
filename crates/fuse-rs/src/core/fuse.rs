@@ -72,54 +72,10 @@ impl<'a> Fuse<'a> {
     /// A `Result` containing a vector of matching JSON values sorted by relevance,
     /// or an error if the search cannot be performed.
     pub fn search(&self, term: &str) -> Result<Vec<Value>, FuseError> {
-        // Check if extended search is requested but unavailable
-        if self.options.use_extended_search {
-            // Implementation of extended search is marked as unavailable in this example
-            return Err(FuseError::ExtendedSearchUnavailable);
-        }
-
-        // Check pattern length against maximum allowed (if specified)
-        if let Some(max_length) = self.options.max_pattern_length {
-            if term.len() > max_length {
-                return Err(FuseError::PatternLengthTooLarge(max_length));
-            }
-        }
-
+        
         // TODO: Implement actual fuzzy search logic
         // Currently returns an empty vector as a placeholder
         Ok(vec![])
     }
 
-    /// Performs a logical search with multiple conditions.
-    ///
-    /// # Arguments
-    ///
-    /// * `query` - A map of field names to query values
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing matching JSON values or an error
-    pub fn logical_search(&self, query: &std::collections::HashMap<String, Value>) -> Result<Vec<Value>, FuseError> {
-        // Check if logical search is supported
-        // For this example, let's assume it's not implemented yet
-        if true {
-            return Err(FuseError::LogicalSearchUnavailable);
-        }
-        
-        // Validate query key values
-        for (key, value) in query {
-            // Check if the key exists in our key store
-            if !self.key_store.keys().iter().any(|k| k.id == *key) {
-                return Err(FuseError::InvalidLogicalQueryForKey(key.clone()));
-            }
-            
-            // Additional validation depending on the value type
-            if !value.is_string() && !value.is_array() && !value.is_object() {
-                return Err(FuseError::InvalidLogicalQueryForKey(key.clone()));
-            }
-        }
-        
-        // TODO: Implement actual logical search logic
-        Ok(vec![])
-    }
 }
