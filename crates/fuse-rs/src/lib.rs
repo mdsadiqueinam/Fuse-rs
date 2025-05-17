@@ -25,7 +25,12 @@ pub use crate::core::options::keys::FuseOptionKey;
 pub use crate::core::options::sort::FuseSortFunction;
 
 // Search results
-pub use crate::core::results::search_result::SearchResult;
+pub use crate::core::results::search_result::{
+    RangeTuple,
+    FuseResultMatch,
+    FuseSearchOptions,
+    FuseResult
+};
 pub use crate::core::results::match_result::{
     FuseSortFunctionArg,
     FuseSortFunctionItem,

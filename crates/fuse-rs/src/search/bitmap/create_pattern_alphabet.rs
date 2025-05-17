@@ -11,7 +11,7 @@
 /// # Returns
 ///
 /// A HashMap where keys are characters and values are bitmasks
-pub fn create_pattern_alphabet(pattern: &str) -> std::collections::HashMap<char, u32> {
+pub fn create_pattern_alphabet(pattern: &str) -> std::collections::HashMap<char, u64> {
     let mut mask = std::collections::HashMap::new();
     let len = pattern.len();
     
