@@ -12,6 +12,7 @@
 mod helpers;
 mod core;
 mod tools;
+mod search;
 
 //----------------------------------------------------------------------
 // Public API Exports

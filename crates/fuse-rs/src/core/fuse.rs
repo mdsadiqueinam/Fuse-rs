@@ -15,19 +15,6 @@ use serde_json::Value;
 ///
 /// # Example
 ///
-/// ```rust,no_run
-/// use serde_json::json;
-/// use fuse_rs::{Fuse, FuseOptions};
-///
-/// let data = vec![
-///     json!({"title": "Old Man's War", "author": "John Scalzi"}),
-///     json!({"title": "The Lock Artist", "author": "Steve Hamilton"}),
-/// ];
-///
-/// let options = FuseOptions::default();
-/// let fuse = Fuse::new(&data, &options);
-/// let results = fuse.search("old");
-/// ```
 pub struct Fuse<'a> {
     /// Configuration options for search behavior
     options: FuseOptions<'a>,
