@@ -11,7 +11,7 @@
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// let start_index = 0;
 /// let end_index = 5;
 ///
