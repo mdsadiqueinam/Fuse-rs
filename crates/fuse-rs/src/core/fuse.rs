@@ -1,5 +1,8 @@
+use crate::{
+    core::options::config::FuseOptions,
+    tools::{fuse_index::FuseIndex, key_store::KeyStore},
+};
 use serde_json::Value;
-use crate::{core::options::config::FuseOptions, tools::key_store::KeyStore};
 
 //----------------------------------------------------------------------
 // Main Fuse Implementation
@@ -28,12 +31,14 @@ use crate::{core::options::config::FuseOptions, tools::key_store::KeyStore};
 pub struct Fuse<'a> {
     /// Configuration options for search behavior
     options: FuseOptions<'a>,
-    
+
     /// The collection of documents to search through
-    data: Vec<Value>,
-    
+    docs: Vec<Value>,
+
     /// Index structure for searchable keys in documents
-    key_store: KeyStore<'a>
+    key_store: KeyStore<'a>,
+
+    index: FuseIndex<'a>,
 }
 
 impl<'a> Fuse<'a> {
@@ -47,14 +52,25 @@ impl<'a> Fuse<'a> {
     /// # Returns
     ///
     /// A new `Fuse` instance ready to perform searches
-    pub fn new(data: &[Value], options: &FuseOptions<'a>) -> Self {
+    pub fn new(docs: &[Value], options: &FuseOptions<'a>, index: Option<FuseIndex<'a>>) -> Self {
         let cloned_options = options.clone();
         let key_store = KeyStore::new(&cloned_options.keys);
+        let fuse_index = if let Some(f_index) = index {
+            f_index
+        } else {
+            FuseIndex::create_index(
+                &cloned_options.keys,
+                &docs,
+                Some(cloned_options.get_fn),
+                Some(cloned_options.field_norm_weight),
+            )
+        };
 
         Fuse {
             options: cloned_options,
-            data: data.to_vec(),
-            key_store
+            docs: docs.to_vec(),
+            key_store,
+            index: fuse_index,
         }
     }
 
