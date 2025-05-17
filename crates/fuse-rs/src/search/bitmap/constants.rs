@@ -1,0 +1,1 @@
+pub const MAX_BITS: usize = 32;

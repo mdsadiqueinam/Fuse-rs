@@ -1,5 +1,8 @@
+use crate::{
+    core::{options::config::FuseOptions, error_messages::FuseError},
+    tools::{fuse_index::FuseIndex, key_store::KeyStore},
+};
 use serde_json::Value;
-use crate::{core::options::config::FuseOptions, tools::key_store::KeyStore};
 
 //----------------------------------------------------------------------
 // Main Fuse Implementation
@@ -12,28 +15,17 @@ use crate::{core::options::config::FuseOptions, tools::key_store::KeyStore};
 ///
 /// # Example
 ///
-/// ```rust,no_run
-/// use serde_json::json;
-/// use fuse_rs::{Fuse, FuseOptions};
-///
-/// let data = vec![
-///     json!({"title": "Old Man's War", "author": "John Scalzi"}),
-///     json!({"title": "The Lock Artist", "author": "Steve Hamilton"}),
-/// ];
-///
-/// let options = FuseOptions::default();
-/// let fuse = Fuse::new(&data, &options);
-/// let results = fuse.search("old");
-/// ```
 pub struct Fuse<'a> {
     /// Configuration options for search behavior
     options: FuseOptions<'a>,
-    
+
     /// The collection of documents to search through
-    data: Vec<Value>,
-    
+    docs: Vec<Value>,
+
     /// Index structure for searchable keys in documents
-    key_store: KeyStore<'a>
+    key_store: KeyStore<'a>,
+
+    index: FuseIndex<'a>,
 }
 
 impl<'a> Fuse<'a> {
@@ -47,14 +39,25 @@ impl<'a> Fuse<'a> {
     /// # Returns
     ///
     /// A new `Fuse` instance ready to perform searches
-    pub fn new(data: &[Value], options: &FuseOptions<'a>) -> Self {
+    pub fn new(docs: &[Value], options: &FuseOptions<'a>, index: Option<FuseIndex<'a>>) -> Self {
         let cloned_options = options.clone();
         let key_store = KeyStore::new(&cloned_options.keys);
+        let fuse_index = if let Some(f_index) = index {
+            f_index
+        } else {
+            FuseIndex::create_index(
+                &cloned_options.keys,
+                &docs,
+                Some(cloned_options.get_fn),
+                Some(cloned_options.field_norm_weight),
+            )
+        };
 
         Fuse {
             options: cloned_options,
-            data: data.to_vec(),
-            key_store
+            docs: docs.to_vec(),
+            key_store,
+            index: fuse_index,
         }
     }
 
@@ -66,10 +69,57 @@ impl<'a> Fuse<'a> {
     ///
     /// # Returns
     ///
-    /// A vector of matching JSON values, sorted by relevance
-    pub fn search(&self, _term: &str) -> Vec<Value> {
+    /// A `Result` containing a vector of matching JSON values sorted by relevance,
+    /// or an error if the search cannot be performed.
+    pub fn search(&self, term: &str) -> Result<Vec<Value>, FuseError> {
+        // Check if extended search is requested but unavailable
+        if self.options.use_extended_search {
+            // Implementation of extended search is marked as unavailable in this example
+            return Err(FuseError::ExtendedSearchUnavailable);
+        }
+
+        // Check pattern length against maximum allowed (if specified)
+        if let Some(max_length) = self.options.max_pattern_length {
+            if term.len() > max_length {
+                return Err(FuseError::PatternLengthTooLarge(max_length));
+            }
+        }
+
         // TODO: Implement actual fuzzy search logic
         // Currently returns an empty vector as a placeholder
-        vec![]
+        Ok(vec![])
+    }
+
+    /// Performs a logical search with multiple conditions.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - A map of field names to query values
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing matching JSON values or an error
+    pub fn logical_search(&self, query: &std::collections::HashMap<String, Value>) -> Result<Vec<Value>, FuseError> {
+        // Check if logical search is supported
+        // For this example, let's assume it's not implemented yet
+        if true {
+            return Err(FuseError::LogicalSearchUnavailable);
+        }
+        
+        // Validate query key values
+        for (key, value) in query {
+            // Check if the key exists in our key store
+            if !self.key_store.keys().iter().any(|k| k.id == *key) {
+                return Err(FuseError::InvalidLogicalQueryForKey(key.clone()));
+            }
+            
+            // Additional validation depending on the value type
+            if !value.is_string() && !value.is_array() && !value.is_object() {
+                return Err(FuseError::InvalidLogicalQueryForKey(key.clone()));
+            }
+        }
+        
+        // TODO: Implement actual logical search logic
+        Ok(vec![])
     }
 }

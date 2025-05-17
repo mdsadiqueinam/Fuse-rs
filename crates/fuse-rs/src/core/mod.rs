@@ -12,5 +12,8 @@ pub(crate) mod results;
 // Scoring functions
 pub(crate) mod compute_score;
 
+// Error messages
+pub(crate) mod error_messages;
+
 // Main search implementation
 pub(crate) mod fuse;

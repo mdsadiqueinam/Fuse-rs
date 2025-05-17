@@ -25,6 +25,16 @@ pub enum FuseOptionKeyName<'a> {
     StringArray(Vec<Cow<'a, str>>),
 }
 
+impl<'a> FuseOptionKeyName<'a> {
+    /// Check if the key name is empty
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::String(s) => s.is_empty(),
+            Self::StringArray(arr) => arr.is_empty() || arr.iter().all(|s| s.is_empty()),
+        }
+    }
+}
+
 /// Function type for retrieving values from a JSON structure
 ///
 /// This allows custom accessor functions to extract values from complex structures.

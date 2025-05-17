@@ -12,6 +12,7 @@
 mod helpers;
 mod core;
 mod tools;
+mod search;
 
 //----------------------------------------------------------------------
 // Public API Exports
@@ -23,8 +24,16 @@ pub use crate::core::options::config::FuseOptions;
 pub use crate::core::options::keys::FuseOptionKey;
 pub use crate::core::options::sort::FuseSortFunction;
 
+// Error types
+pub use crate::core::error_messages::FuseError;
+
 // Search results
-pub use crate::core::results::search_result::SearchResult;
+pub use crate::core::results::search_result::{
+    RangeTuple,
+    FuseResultMatch,
+    FuseSearchOptions,
+    FuseResult
+};
 pub use crate::core::results::match_result::{
     FuseSortFunctionArg,
     FuseSortFunctionItem,

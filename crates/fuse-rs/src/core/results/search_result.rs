@@ -7,27 +7,58 @@
 // Search Result Types
 //----------------------------------------------------------------------
 
-/// Represents a basic search result item
-/// 
-/// Contains the matching score and the index of the matched item in the original data array.
-/// This is used in the simple search mode when full match details aren't needed.
+/// Denotes the start/end indices of a match
 ///
 /// # Example
 ///
-/// ```
-/// use fuse_rs::SearchResult;
+/// ```ignore
+/// let start_index = 0;
+/// let end_index = 5;
 ///
-/// // A match with the item at index 2 in the original array, with a score of 0.42
-/// let result = SearchResult {
-///     score: 0.42,
-///     idx: 2,
-/// };
+/// let range: RangeTuple = (start_index, end_index);
 /// ```
-#[derive(Debug, Default)]
-pub struct SearchResult {
-    /// The calculated relevance score for this match (lower is better)
-    pub score: f64,
+pub type RangeTuple = (usize, usize);
+
+/// Represents a match within a search result
+///
+/// Contains information about where the match occurred, including character
+/// positions and which key contained the match.
+#[derive(Debug, Clone)]
+pub struct FuseResultMatch {
+    /// Array of index ranges showing where matches occurred
+    pub indices: Vec<RangeTuple>,
     
-    /// The original index of the matched item in the data array
-    pub idx: usize,
+    /// The key in the document where the match was found
+    pub key: Option<String>,
+    
+    /// The reference index of the document in the original collection
+    pub ref_index: Option<usize>,
+    
+    /// The matched value as a string
+    pub value: Option<String>,
+}
+
+/// Options for controlling search behavior
+#[derive(Debug, Clone)]
+pub struct FuseSearchOptions {
+    /// Maximum number of results to return
+    pub limit: usize,
+}
+
+/// A complete search result including the matched item and scoring details
+///
+/// Generic over the item type to allow for different data types in search collections.
+#[derive(Debug, Clone)]
+pub struct FuseResult<T> {
+    /// The original item that matched the search
+    pub item: T,
+    
+    /// The reference index of the matched item in the original collection
+    pub ref_index: usize,
+    
+    /// The relevance score of this match (lower is better)
+    pub score: Option<f64>,
+    
+    /// Details about which parts of the item matched and where
+    pub matches: Option<Vec<FuseResultMatch>>,
 }
