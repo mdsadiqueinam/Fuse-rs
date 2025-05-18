@@ -7,4 +7,4 @@
 pub(crate) mod get;
 
 // Text normalization utilities
-pub(crate) mod diacritics;
+pub(crate) mod str_ext;

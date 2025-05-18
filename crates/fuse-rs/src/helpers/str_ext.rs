@@ -27,23 +27,48 @@ lazy_static! {
 ///
 /// This trait provides a method to normalize text by stripping 
 /// accent marks and other diacritical signs.
-pub trait Diacritics {
+pub trait StrExt {
     /// Removes all diacritical marks from the string
     ///
     /// # Returns
     ///
     /// A new string with all diacritical marks removed
     fn strip_diacritics(self) -> String;
+
+    /// Finds the index of a substring in the string starting from a given position
+    /// 
+    /// # Arguments
+    /// 
+    /// * `needle` - The substring to search for
+    /// * `from` - The position to start searching from
+    /// 
+    /// # Returns
+    /// 
+    /// An `Option<usize>` representing the index of the substring if found, or `None` if not found
+    /// 
+    /// # Example
+    /// 
+    /// ```rust
+    /// let text = "hello world";
+    /// let index = text.index_of("world", 0);
+    /// assert_eq!(index, Some(6));
+    /// ```
+    fn index_of(self, needle: &str, from: usize) -> Option<usize>;
 }
 
 /// Implementation for string references
-impl Diacritics for &str {
+impl StrExt for &str {
     fn strip_diacritics(self) -> String {
         // First decompose the string into base characters and combining marks
         let result = self.nfd().collect::<String>();
         
         // Then remove all the combining marks
         DIACRITICS_REGEX.replace_all(&result, "").to_string()
+    }
+
+    fn index_of(self, needle: &str, from: usize) -> Option<usize> {
+        // Find the index of the needle in the string starting from the specified position
+        self[from..].find(needle).map(|i| i + from)
     }
 }
 
@@ -77,6 +102,16 @@ mod tests {
         let input = "";
         let expected = "";
         assert_eq!(input.strip_diacritics(), expected);
+    }
+
+    #[test]
+    fn test_index_of() {
+        let input = "hello world";
+        assert_eq!(input.index_of("world", 0), Some(6));
+        assert_eq!(input.index_of("hello", 0), Some(0));
+        assert_eq!(input.index_of("o", 4), Some(4));
+        assert_eq!(input.index_of("x", 0), None);
+        assert_eq!(input.index_of("world", 7), None);
     }
 }
 
