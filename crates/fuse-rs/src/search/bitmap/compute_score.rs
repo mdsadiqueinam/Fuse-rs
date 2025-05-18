@@ -15,14 +15,14 @@ use crate::core::options::config::FuseOptions;
 ///
 /// A score between 0.0 (perfect match) and 1.0 (completely different)
 pub fn compute_score(
-    pattern_length: usize,
+    pattern: &str,
     errors: usize,
     current_location: usize,
     expected_location: usize,
     options: &FuseOptions,
 ) -> f64 {
     // Calculate the score based on the error ratio
-    let accuracy = errors as f64 / pattern_length as f64;
+    let accuracy = errors as f64 / pattern.len() as f64;
     
     // If location is ignored, just return the accuracy score
     if options.ignore_location {
@@ -54,7 +54,7 @@ mod tests {
             ..Default::default()
         };
         
-        let score = compute_score(5, 0, 10, 10, &options);
+        let score = compute_score("aaaaa", 0, 10, 10, &options);
         assert_eq!(score, 0.0);
     }
     
@@ -66,7 +66,7 @@ mod tests {
             ..Default::default()
         };
         
-        let score = compute_score(10, 2, 10, 10, &options);
+        let score = compute_score("aaaaaaaaaa", 2, 10, 10, &options);
         assert_eq!(score, 0.2);
     }
     
@@ -78,7 +78,7 @@ mod tests {
             ..Default::default()
         };
         
-        let score = compute_score(5, 0, 0, 10, &options);
+        let score = compute_score("aaaaa", 0, 0, 10, &options);
         assert_eq!(score, 0.1);
     }
     
@@ -90,7 +90,7 @@ mod tests {
             ..Default::default()
         };
         
-        let score = compute_score(5, 1, 0, 10, &options);
+        let score = compute_score("aaaaa", 1, 0, 10, &options);
         assert_eq!(score, 0.2);
     }
     
@@ -103,11 +103,11 @@ mod tests {
         };
         
         // When proximity is non-zero and distance is zero
-        let score1 = compute_score(5, 1, 0, 10, &options);
+        let score1 = compute_score("aaaaa", 1, 0, 10, &options);
         assert_eq!(score1, 1.0);
         
         // When proximity is zero and distance is zero
-        let score2 = compute_score(5, 1, 10, 10, &options);
+        let score2 = compute_score("aaaaa", 1, 10, 10, &options);
         assert_eq!(score2, 0.2);
     }
 }
