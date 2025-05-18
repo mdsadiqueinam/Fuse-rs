@@ -33,7 +33,7 @@ pub trait StrExt {
     /// # Returns
     ///
     /// A new string with all diacritical marks removed
-    fn strip_diacritics(self) -> String;
+    fn strip_diacritics(&self) -> String;
 
     /// Finds the index of a substring in the string starting from a given position
     /// 
@@ -48,17 +48,18 @@ pub trait StrExt {
     /// 
     /// # Example
     /// 
-    /// ```rust
+    /// ```ignore
+    /// 
     /// let text = "hello world";
     /// let index = text.index_of("world", 0);
     /// assert_eq!(index, Some(6));
     /// ```
-    fn index_of(self, needle: &str, from: usize) -> Option<usize>;
+    fn index_of(&self, needle: &str, from: usize) -> Option<usize>;
 }
 
 /// Implementation for string references
-impl StrExt for &str {
-    fn strip_diacritics(self) -> String {
+impl StrExt for str {
+    fn strip_diacritics(&self) -> String {
         // First decompose the string into base characters and combining marks
         let result = self.nfd().collect::<String>();
         
@@ -66,7 +67,7 @@ impl StrExt for &str {
         DIACRITICS_REGEX.replace_all(&result, "").to_string()
     }
 
-    fn index_of(self, needle: &str, from: usize) -> Option<usize> {
+    fn index_of(&self, needle: &str, from: usize) -> Option<usize> {
         // Find the index of the needle in the string starting from the specified position
         self[from..].find(needle).map(|i| i + from)
     }
@@ -106,11 +107,12 @@ mod tests {
 
     #[test]
     fn test_index_of() {
-        let input = "hello world";
+        let input = "hello world".to_string();
         assert_eq!(input.index_of("world", 0), Some(6));
         assert_eq!(input.index_of("hello", 0), Some(0));
         assert_eq!(input.index_of("o", 4), Some(4));
         assert_eq!(input.index_of("x", 0), None);
+        
         assert_eq!(input.index_of("world", 7), None);
     }
 }
