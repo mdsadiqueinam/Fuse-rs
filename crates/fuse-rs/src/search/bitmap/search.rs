@@ -164,7 +164,7 @@ pub fn search(
     }
 
     let mut result = SearchResult {
-        is_match: best_location.unwrap_or(0) >= 0,
+        is_match: best_location.is_some(),
         // Count exact matches (those with a score of 0) to be "almost" exact
         score: (0.001f64).max(final_score),
 
