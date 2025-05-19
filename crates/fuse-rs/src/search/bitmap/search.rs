@@ -2,9 +2,11 @@ use crate::FuseError;
 use crate::FuseOptions;
 use crate::helpers::str_ext::StrExt;
 use std::collections::HashMap;
+use std::usize::MAX;
 
 use super::compute_score::compute_score;
 use super::constants::MAX_BITS;
+use super::convert_mask_to_indices::convert_mask_to_indices;
 
 pub struct SearchResult {
     /// Whether the pattern was found in the text
@@ -23,40 +25,51 @@ pub fn search(
     pattern_alphabet: &HashMap<char, u64>,
     options: &FuseOptions,
 ) -> Result<SearchResult, FuseError> {
+    // Check pattern length against maximum allowed
     if pattern.len() > MAX_BITS {
         return Err(FuseError::PatternLengthTooLarge(MAX_BITS));
     }
 
     let pattern_length = pattern.len();
+    // Set starting location at beginning text and initialize the alphabet.
     let text_length = text.len();
-    let expected_location = options.location.min(text_length);
+    // Handle the case when location > text.length
+    let expected_location = 0.max(options.location.min(text_length));
+    // Highest score beyond which we give up.
     let mut current_threshold = options.threshold;
-    let mut best_location: isize = expected_location as isize;
+    // Is there a nearby exact match? (speedup)
+    let mut best_location = Some(expected_location);
 
+    // Performance: only computer matches when the minMatchCharLength > 1
+    // OR if includeMatches is true.
     let compute_matches = options.min_match_char_length > 1 || options.include_matches;
+    // A mask of the matches, used for building the indices
     let mut match_mask = if compute_matches {
         vec![0; text_length]
     } else {
         Vec::new()
     };
 
-    let mut final_score = 1.0;
+    while let Some(index) = text.index_of(pattern, best_location) {
+        let score = compute_score(pattern, 0, index, expected_location, options);
 
-    while let Some(i) = text.index_of(pattern, 0.max(best_location) as usize) {
-        let score = compute_score(pattern, 0, i, expected_location, options);
         current_threshold = score.min(current_threshold);
-        best_location = (i + pattern_length) as isize;
+        best_location = Some(index + pattern_length);
 
         if compute_matches {
-            for j in 0..pattern_length {
-                match_mask[i + j] = 1;
+            for i in 0..pattern_length {
+                match_mask[index + i] = 1;
             }
         }
     }
 
-    best_location = -1;
-    let mut last_bit_arr = vec![0u64; 0];
+    // reset the best location
+    best_location = None;
+
+    let mut last_bit_arr: Vec<u64> = Vec::new();
+    let mut final_score = 1.0;
     let mut bin_max = pattern_length + text_length;
+
     let mask = 1 << (pattern_length - 1);
 
     for i in 0..pattern_length {
@@ -64,65 +77,85 @@ pub fn search(
         let mut bin_mid = bin_max;
 
         while bin_min < bin_mid {
-            let mid = bin_min + (bin_max - bin_min) / 2;
-            let score = compute_score(pattern, i, expected_location + mid, expected_location, options);
+            let score = compute_score(
+                pattern,
+                i,
+                expected_location + bin_mid,
+                expected_location,
+                options,
+            );
 
             if score <= current_threshold {
-                bin_min = mid;
+                bin_mid = bin_mid;
             } else {
-                bin_max = mid;
+                bin_max = bin_mid;
             }
 
-            bin_mid = bin_min + (bin_max - bin_min) / 2;
+            bin_mid = (bin_max - bin_mid) / 2 + bin_mid;
         }
 
+        // Use the result from this iteration as the maximum for the next.
         bin_max = bin_mid;
 
-        let mut start = 1.max(expected_location as isize - bin_mid as isize + 1) as usize;
+        let mut start = 1.max(expected_location - bin_mid + 1);
         let finish = if options.find_all_matches {
             text_length
         } else {
             (expected_location + bin_mid).min(text_length) + pattern_length
         };
 
-        let mut bit_arr = vec![0u64; finish + 2];
+        let mut bit_arr = vec![0; finish + 2];
+
         bit_arr[finish + 1] = (1 << i) - 1;
 
-        for j in (start..=finish).rev() {
+        for j in finish..start {
             let current_location = j - 1;
-            let char_match = *pattern_alphabet.get(&text.chars().nth(current_location).unwrap_or('\0')).unwrap_or(&0);
+            let char_match = pattern_alphabet.get(&text.chars().nth(current_location).unwrap());
 
             if compute_matches {
-                match_mask[current_location] = if char_match > 0 { 1 } else { 0 };
+                // Speed up: quick bool to int conversion (i.e, `charMatch ? 1 : 0`)
+                match_mask[current_location] = if char_match.is_some() { 1 } else { 0 };
             }
 
-            bit_arr[j] = ((bit_arr[j + 1] << 1) | 1) & char_match;
+            // First pass: exact match
+            bit_arr[j] = ((bit_arr[j + 1] << 1) | 1) & char_match.unwrap_or(&0);
 
+            // Subsequent passes: fuzzy match
             if i > 0 {
-                bit_arr[j] |= ((last_bit_arr.get(j + 1).copied().unwrap_or(0)
-                    | last_bit_arr.get(j).copied().unwrap_or(0))
-                    << 1)
-                    | 1
-                    | last_bit_arr.get(j + 1).copied().unwrap_or(0);
+                bit_arr[j] |=
+                    ((last_bit_arr[j + 1] | last_bit_arr[j]) << 1) | 1 | last_bit_arr[j + 1]
             }
 
-            if (bit_arr[j] & mask) != 0 {
-                final_score = compute_score(pattern, i, current_location, expected_location, options);
+            if bit_arr[j] & mask != 0 {
+                final_score =
+                    compute_score(pattern, i, current_location, expected_location, options);
 
+                // This match will almost certainly be better than any existing match.
+                // But check anyway.
                 if final_score <= current_threshold {
+                    // Indeed it is
                     current_threshold = final_score;
-                    best_location = current_location as isize;
+                    best_location = Some(current_location);
 
-                    if best_location <= expected_location as isize {
+                    // Already passed `loc`, downhill from here on in.
+                    if best_location.unwrap_or(expected_location + 1) <= expected_location {
                         break;
                     }
 
-                    start = (1.max(2 * expected_location as isize - best_location) as usize).max(1);
+                    // When passing `bestLocation`, don't exceed our current distance from `expectedLocation`.
+                    start = 1.max(2 * expected_location - best_location.unwrap_or(0));
                 }
             }
         }
 
-        let score = compute_score(pattern, i + 1, expected_location, expected_location, options);
+        let score = compute_score(
+            pattern,
+            i + 1,
+            expected_location,
+            expected_location,
+            options,
+        );
+
         if score > current_threshold {
             break;
         }
@@ -131,38 +164,28 @@ pub fn search(
     }
 
     let mut result = SearchResult {
-        is_match: best_location >= 0,
-        score: final_score.max(0.001),
-        indices: vec![],
+        is_match: best_location.unwrap_or(0) >= 0,
+        // Count exact matches (those with a score of 0) to be "almost" exact
+        score: (0.001f64).max(final_score),
+
+        indices: Vec::new(),
     };
 
     if compute_matches {
-        let mut indices = Vec::new();
-        let mut start: Option<usize> = None;
-        for (i, &bit) in match_mask.iter().enumerate() {
-            if bit == 1 {
-                if start.is_none() {
-                    start = Some(i);
-                }
-            } else if let Some(s) = start {
-                if i - s >= options.min_match_char_length {
-                    indices.push((s, i - 1));
-                }
-                start = None;
-            }
-        }
-        if let Some(s) = start {
-            if text_length - s >= options.min_match_char_length {
-                indices.push((s, text_length - 1));
-            }
-        }
+        let bool_match_mask = match_mask
+            .iter()
+            .map(|&x| x != 0)
+            .collect::<Vec<_>>();
+        let indicies = convert_mask_to_indices(&bool_match_mask, options.min_match_char_length);
 
-        if indices.is_empty() {
+        if indicies.is_empty() {
             result.is_match = false;
         } else if options.include_matches {
-            result.indices = indices;
+            result.indices = indicies;
         }
     }
 
+    // TODO: Implement actual bitmap-based search
+    // This is a placeholder that returns an empty result
     Ok(result)
 }

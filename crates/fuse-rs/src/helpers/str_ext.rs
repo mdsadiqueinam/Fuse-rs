@@ -54,7 +54,7 @@ pub trait StrExt {
     /// let index = text.index_of("world", 0);
     /// assert_eq!(index, Some(6));
     /// ```
-    fn index_of(&self, needle: &str, from: usize) -> Option<usize>;
+    fn index_of(&self, needle: &str, from: Option<usize>) -> Option<usize>;
 }
 
 /// Implementation for string references
@@ -67,8 +67,11 @@ impl StrExt for str {
         DIACRITICS_REGEX.replace_all(&result, "").to_string()
     }
 
-    fn index_of(&self, needle: &str, from: usize) -> Option<usize> {
+    fn index_of(&self, needle: &str, from: Option<usize>) -> Option<usize> {
         // Find the index of the needle in the string starting from the specified position
+        // If `from` is None, start from the beginning of the string
+        let from = from.unwrap_or(0);
+        // Ensure the starting position is within bounds
         self[from..].find(needle).map(|i| i + from)
     }
 }
@@ -108,12 +111,11 @@ mod tests {
     #[test]
     fn test_index_of() {
         let input = "hello world".to_string();
-        assert_eq!(input.index_of("world", 0), Some(6));
-        assert_eq!(input.index_of("hello", 0), Some(0));
-        assert_eq!(input.index_of("o", 4), Some(4));
-        assert_eq!(input.index_of("x", 0), None);
-        
-        assert_eq!(input.index_of("world", 7), None);
+        assert_eq!(input.index_of("world", Some(0)), Some(6));
+        assert_eq!(input.index_of("hello", Some(0)), Some(0));
+        assert_eq!(input.index_of("o", Some(4)), Some(4));
+        assert_eq!(input.index_of("x", Some(0)), None);
+        assert_eq!(input.index_of("world", Some(7)), None);
     }
 }
 
