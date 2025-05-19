@@ -108,7 +108,7 @@ pub fn search(
 
         bit_arr[finish + 1] = (1 << i) - 1;
 
-        for j in finish..start {
+        for j in (start..=finish).rev() {
             let current_location = j - 1;
             let char_match = pattern_alphabet.get(&text.chars().nth(current_location).unwrap());
 
