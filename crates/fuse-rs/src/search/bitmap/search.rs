@@ -15,7 +15,7 @@ pub struct SearchResult {
     pub score: f64,
 
     /// List of match position ranges as (start, end) tuples
-    pub indices: Vec<(usize, usize)>,
+    pub indices: Option<Vec<(usize, usize)>>,
 }
 
 pub fn search(
@@ -178,7 +178,7 @@ pub fn search(
         // Count exact matches (those with a score of 0) to be "almost" exact
         score: (0.001f64).max(final_score),
 
-        indices: Vec::new(),
+        indices: None,
     };
 
     if compute_matches {
@@ -191,7 +191,7 @@ pub fn search(
         if indicies.is_empty() {
             result.is_match = false;
         } else if options.include_matches {
-            result.indices = indicies;
+            result.indices = Some(indicies);
         }
     }
 
@@ -271,11 +271,11 @@ mod tests {
         let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
         
         assert!(result.is_match);
-        assert!(!result.indices.is_empty());
+        assert!(result.indices.is_some());
         
         // Expected match indices for "world" in "hello world" (starting from positions 6-10)
         let expected_indices = vec![(2, 4), (6, 10)];
-        assert_eq!(result.indices, expected_indices);
+        assert_eq!(result.indices, Some(expected_indices));
     }
 
     #[test]
@@ -292,7 +292,7 @@ mod tests {
         let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
         
         assert!(result.is_match);
-        assert!(!result.indices.is_empty());
+        assert!(result.indices.is_some());
         
         // Test with min length that's too long
         let mut options = default_options();
@@ -355,7 +355,8 @@ mod tests {
         options.include_matches = true;
         
         let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
-        assert_eq!(result.indices.len(), 1);
-        assert_eq!(result.indices, vec![(0, 5)]);
+        let indices = result.indices.unwrap();
+        assert_eq!(indices.len(), 1);
+        assert_eq!(indices, vec![(0, 5)]);
     }
 }
