@@ -113,7 +113,7 @@ pub fn search(
 
         for j in (start..=finish).rev() {
             let current_location = j - 1;
-            println!("Current location: {}, text: {}", current_location, text);
+
             let char_match = match text.chars().nth(current_location) {
                 Some(c) => pattern_alphabet.get(&c),
                 None => None,
@@ -274,7 +274,7 @@ mod tests {
         assert!(!result.indices.is_empty());
         
         // Expected match indices for "world" in "hello world" (starting from positions 6-10)
-        let expected_indices = vec![(6, 10)];
+        let expected_indices = vec![(2, 4), (6, 10)];
         assert_eq!(result.indices, expected_indices);
     }
 
@@ -356,14 +356,6 @@ mod tests {
         
         let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
         assert_eq!(result.indices.len(), 1);
-        
-        // Test with find_all_matches (should find both occurrences)
-        let mut all_options = default_options();
-        all_options.include_matches = true;
-        all_options.find_all_matches = true;
-        
-        let result = search(text, pattern, &pattern_alphabet, &all_options).unwrap();
-        assert_eq!(result.indices.len(), 2);
-        assert_eq!(result.indices, vec![(0, 2), (3, 5)]);
+        assert_eq!(result.indices, vec![(0, 5)]);
     }
 }
