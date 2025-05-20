@@ -1,5 +1,3 @@
-// filepath: /Users/yasinquraishy/RustroverProjects/fuse-rs/crates/fuse-rs/src/search/bitmap/convert_mask_to_indices.rs
-
 /// Converts a match mask to an array of index pairs.
 ///
 /// This function takes a boolean mask array where `true` represents a match at that position,

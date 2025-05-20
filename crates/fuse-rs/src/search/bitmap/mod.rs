@@ -3,3 +3,4 @@ pub(crate) mod constants;
 pub(crate) mod convert_mask_to_indices;
 pub(crate) mod create_pattern_alphabet;
 pub(crate) mod search;
+pub(crate) mod bitmap_search;
