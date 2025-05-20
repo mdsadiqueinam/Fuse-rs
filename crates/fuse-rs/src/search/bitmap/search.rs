@@ -2,7 +2,6 @@ use crate::FuseError;
 use crate::FuseOptions;
 use crate::helpers::str_ext::StrExt;
 use std::collections::HashMap;
-use std::usize::MAX;
 
 use super::compute_score::compute_score;
 use super::constants::MAX_BITS;
@@ -38,7 +37,7 @@ pub fn search(
     // Highest score beyond which we give up.
     let mut current_threshold = options.threshold;
     // Is there a nearby exact match? (speedup)
-    let mut best_location = Some(expected_location);
+    let mut best_location = expected_location;
 
     // Performance: only computer matches when the minMatchCharLength > 1
     // OR if includeMatches is true.
@@ -50,11 +49,11 @@ pub fn search(
         Vec::new()
     };
 
-    while let Some(index) = text.index_of(pattern, best_location) {
+    while let Some(index) = text.index_of(pattern, Some(best_location)) {
         let score = compute_score(pattern, 0, index, expected_location, options);
 
         current_threshold = score.min(current_threshold);
-        best_location = Some(index + pattern_length);
+        best_location = index + pattern_length;
 
         if compute_matches {
             for i in 0..pattern_length {
@@ -64,7 +63,7 @@ pub fn search(
     }
 
     // reset the best location
-    best_location = None;
+    best_location = usize::MAX; // -1 equivalent in Rust
 
     let mut last_bit_arr: Vec<u64> = Vec::new();
     let mut final_score = 1.0;
@@ -86,31 +85,39 @@ pub fn search(
             );
 
             if score <= current_threshold {
-                bin_mid = bin_mid;
+                bin_min = bin_mid;
             } else {
                 bin_max = bin_mid;
             }
 
-            bin_mid = (bin_max - bin_mid) / 2 + bin_mid;
+            bin_mid = ((bin_max - bin_min) / 2) + bin_min;
         }
 
         // Use the result from this iteration as the maximum for the next.
         bin_max = bin_mid;
+        
+        let mut start = match expected_location.checked_sub(bin_mid) {
+            Some(val) => val + 1,
+            None => 1,
+        };
 
-        let mut start = 1.max(expected_location - bin_mid + 1);
         let finish = if options.find_all_matches {
             text_length
         } else {
             (expected_location + bin_mid).min(text_length) + pattern_length
         };
-
+        
         let mut bit_arr = vec![0; finish + 2];
 
         bit_arr[finish + 1] = (1 << i) - 1;
 
         for j in (start..=finish).rev() {
             let current_location = j - 1;
-            let char_match = pattern_alphabet.get(&text.chars().nth(current_location).unwrap());
+            println!("Current location: {}, text: {}", current_location, text);
+            let char_match = match text.chars().nth(current_location) {
+                Some(c) => pattern_alphabet.get(&c),
+                None => None,
+            };
 
             if compute_matches {
                 // Speed up: quick bool to int conversion (i.e, `charMatch ? 1 : 0`)
@@ -135,15 +142,18 @@ pub fn search(
                 if final_score <= current_threshold {
                     // Indeed it is
                     current_threshold = final_score;
-                    best_location = Some(current_location);
+                    best_location = current_location;
 
                     // Already passed `loc`, downhill from here on in.
-                    if best_location.unwrap_or(expected_location + 1) <= expected_location {
+                    if best_location <= expected_location {
                         break;
                     }
 
                     // When passing `bestLocation`, don't exceed our current distance from `expectedLocation`.
-                    start = 1.max(2 * expected_location - best_location.unwrap_or(0));
+                    start = match expected_location.checked_sub(best_location) {
+                        Some(val) => val * 2,
+                        None => 1,
+                    };
                 }
             }
         }
@@ -164,7 +174,7 @@ pub fn search(
     }
 
     let mut result = SearchResult {
-        is_match: best_location.is_some(),
+        is_match: best_location != usize::MAX,
         // Count exact matches (those with a score of 0) to be "almost" exact
         score: (0.001f64).max(final_score),
 
@@ -185,7 +195,175 @@ pub fn search(
         }
     }
 
-    // TODO: Implement actual bitmap-based search
-    // This is a placeholder that returns an empty result
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    // Helper function to create pattern alphabet
+    fn create_pattern_alphabet(pattern: &str) -> HashMap<char, u64> {
+        let pattern_len = pattern.len();
+        let mut mask: HashMap<char, u64> = HashMap::new();
+        
+        for (i, c) in pattern.chars().enumerate() {
+            mask.entry(c)
+                .and_modify(|e| *e |= 1 << (pattern_len - i - 1))
+                .or_insert(1 << (pattern_len - i - 1));
+        }
+        
+        mask
+    }
+
+    // Helper to create default options
+    fn default_options() -> FuseOptions<'static> {
+        FuseOptions::new()
+    }
+
+    #[test]
+    fn test_exact_match() {
+        let text = "hello world";
+        let pattern = "world";
+        let pattern_alphabet = create_pattern_alphabet(pattern);
+        let options = default_options();
+        
+        let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
+        
+        assert!(result.is_match);
+        assert!(result.score < 0.1); // Exact matches have very low scores
+    }
+
+    #[test]
+    fn test_no_match() {
+        let text = "hello world";
+        let pattern = "xyz";
+        let pattern_alphabet = create_pattern_alphabet(pattern);
+        let options = default_options();
+        
+        let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
+        
+        assert!(!result.is_match);
+    }
+
+    #[test]
+    fn test_fuzzy_match() {
+        let text = "hello world";
+        let pattern = "helo wrld"; // Fuzzy version with missing characters
+        let pattern_alphabet = create_pattern_alphabet(pattern);
+        let options = default_options();
+        
+        let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
+        
+        // This should be a match because it's close enough
+        assert!(result.is_match);
+    }
+
+    #[test]
+    fn test_include_matches() {
+        let text = "hello world";
+        let pattern = "world";
+        let pattern_alphabet = create_pattern_alphabet(pattern);
+        let mut options = default_options();
+        options.include_matches = true;
+        
+        let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
+        
+        assert!(result.is_match);
+        assert!(!result.indices.is_empty());
+        
+        // Expected match indices for "world" in "hello world" (starting from positions 6-10)
+        let expected_indices = vec![(6, 10)];
+        assert_eq!(result.indices, expected_indices);
+    }
+
+    #[test]
+    fn test_min_match_char_length() {
+        let text = "hello world";
+        let pattern = "world";
+        let pattern_alphabet = create_pattern_alphabet(pattern);
+        
+        // Test with min length 3
+        let mut options = default_options();
+        options.min_match_char_length = 3;
+        options.include_matches = true;
+        
+        let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
+        
+        assert!(result.is_match);
+        assert!(!result.indices.is_empty());
+        
+        // Test with min length that's too long
+        let mut options = default_options();
+        options.min_match_char_length = 10;
+        options.include_matches = true;
+        
+        let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
+        
+        // Should not match since we require 10 consecutive characters
+        assert!(!result.is_match);
+    }
+
+    #[test]
+    fn test_threshold_effect() {
+        let text = "hello world";
+        let pattern = "helo wrld"; // Fuzzy match
+        let pattern_alphabet = create_pattern_alphabet(pattern);
+        
+        // With default threshold
+        let options = default_options();
+        let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
+        assert!(result.is_match);
+        
+        // With stricter threshold that should fail
+        let mut strict_options = default_options();
+        strict_options.threshold = 0.2;
+        
+        let result = search(text, pattern, &pattern_alphabet, &strict_options).unwrap();
+        assert!(!result.is_match);
+    }
+
+    #[test]
+    fn test_pattern_too_large() {
+        let text = "hello world";
+        // Create a pattern that exceeds MAX_BITS
+        let pattern = "a".repeat(MAX_BITS + 1);
+        let pattern_alphabet = create_pattern_alphabet(&pattern);
+        let options = default_options();
+        
+        match search(text, &pattern, &pattern_alphabet, &options) {
+            Err(FuseError::PatternLengthTooLarge(_)) => {
+                // This is the expected error
+                assert!(true);
+            },
+            _ => {
+                // Any other result is unexpected
+                panic!("Expected PatternLengthTooLarge error");
+            }
+        }
+    }
+
+    #[test]
+    fn test_find_all_matches() {
+        let text = "abcabc";
+        let pattern = "abc";
+        let pattern_alphabet = create_pattern_alphabet(pattern);
+        
+        // Test without find_all_matches (should only find the first occurrence)
+        let mut options = default_options();
+        options.include_matches = true;
+        
+        let result = search(text, pattern, &pattern_alphabet, &options).unwrap();
+        assert_eq!(result.indices.len(), 1);
+        
+        // Test with find_all_matches (should find both occurrences)
+        let mut all_options = default_options();
+        all_options.include_matches = true;
+        all_options.find_all_matches = true;
+        
+        let result = search(text, pattern, &pattern_alphabet, &all_options).unwrap();
+        assert_eq!(result.indices.len(), 2);
+        assert_eq!(result.indices, vec![(0, 2), (3, 5)]);
+    }
 }
