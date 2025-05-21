@@ -17,6 +17,26 @@ use super::fuzzy_match::FuzzyMatch;
 // Regex to split by spaces, but keep anything in quotes together
 lazy_static! {
     static ref SPACE_RE: Regex = Regex::new(r#" +(?=(?:[^"]*"[^"]*")*[^"]*$)"#).unwrap();
+    static ref MULTI_MATCHERS: [fn(&str) -> Option<String>; 8] = [
+        ExactMatch::is_multi_match,
+        IncludeMatch::is_multi_match,
+        PrefixExactMatch::is_multi_match,
+        InversePrefixExactMatch::is_multi_match,
+        InverseSuffixExactMatch::is_multi_match,
+        SuffixExactMatch::is_multi_match,
+        InverseExactMatch::is_multi_match,
+        FuzzyMatch::is_multi_match,
+    ];
+    static ref SINGLE_MATCHERS: [fn(&str) -> Option<String>; 8] = [
+        ExactMatch::is_single_match,
+        IncludeMatch::is_single_match,
+        PrefixExactMatch::is_single_match,
+        InversePrefixExactMatch::is_single_match,
+        InverseSuffixExactMatch::is_single_match,
+        SuffixExactMatch::is_single_match,
+        InverseExactMatch::is_single_match,
+        FuzzyMatch::is_single_match,
+    ];
 }
 
 const OR_TOKEN: &str = "|";
@@ -49,72 +69,37 @@ pub fn parse_query<'a>(pattern: &str, options: &FuseOptions<'a>) -> Vec<Vec<Matc
             let mut results: Vec<MatcherBox<'a>> = Vec::new();
 
             for query_item in query {
-                // 1. Handle multiple query match (i.e, ones that are quoted, like `"hello world"`)
+                let constructors: [Box<dyn Fn(String, &FuseOptions<'a>) -> MatcherBox<'a>>; 8] = [
+                    Box::new(|token, _| Arc::new(ExactMatch::new(token))),
+                    Box::new(|token, _| Arc::new(IncludeMatch::new(token))),
+                    Box::new(|token, _| Arc::new(PrefixExactMatch::new(token))),
+                    Box::new(|token, _| Arc::new(InversePrefixExactMatch::new(token))),
+                    Box::new(|token, _| Arc::new(InverseSuffixExactMatch::new(token))),
+                    Box::new(|token, _| Arc::new(SuffixExactMatch::new(token))),
+                    Box::new(|token, _| Arc::new(InverseExactMatch::new(token))),
+                    Box::new(|token, opts| Arc::new(FuzzyMatch::new(token, std::borrow::Cow::Owned(opts.clone())))),
+                ];
+
+                // Multi-match
                 let mut found = false;
-                for idx in 0..8 {
-                    let token = match idx {
-                        0 => ExactMatch::is_multi_match(&query_item),
-                        1 => IncludeMatch::is_multi_match(&query_item),
-                        2 => PrefixExactMatch::is_multi_match(&query_item),
-                        3 => InversePrefixExactMatch::is_multi_match(&query_item),
-                        4 => InverseSuffixExactMatch::is_multi_match(&query_item),
-                        5 => SuffixExactMatch::is_multi_match(&query_item),
-                        6 => InverseExactMatch::is_multi_match(&query_item),
-                        7 => FuzzyMatch::is_multi_match(&query_item),
-                        _ => None,
-                    };
-                    if let Some(token) = token {
-                        match idx {
-                            0 => results.push(Arc::new(ExactMatch::new(token))),
-                            1 => results.push(Arc::new(IncludeMatch::new(token))),
-                            2 => results.push(Arc::new(PrefixExactMatch::new(token))),
-                            3 => results.push(Arc::new(InversePrefixExactMatch::new(token))),
-                            4 => results.push(Arc::new(InverseSuffixExactMatch::new(token))),
-                            5 => results.push(Arc::new(SuffixExactMatch::new(token))),
-                            6 => results.push(Arc::new(InverseExactMatch::new(token))),
-                            7 => results.push(Arc::new(FuzzyMatch::new(token, std::borrow::Cow::Owned(options.clone())))),
-                            _ => {},
-                        }
+                for (idx, matcher) in (*MULTI_MATCHERS).iter().enumerate() {
+                    if let Some(token) = matcher(&query_item) {
+                        results.push(constructors[idx](token, &options));
                         found = true;
                         break;
                     }
                 }
+
                 if found {
                     continue;
                 }
 
-                // 2. Handle single query matches (i.e, ones that are *not* quoted)
-                let mut matched = false;
-                for idx in 0..8 {
-                    let token = match idx {
-                        0 => ExactMatch::is_single_match(&query_item),
-                        1 => IncludeMatch::is_single_match(&query_item),
-                        2 => PrefixExactMatch::is_single_match(&query_item),
-                        3 => InversePrefixExactMatch::is_single_match(&query_item),
-                        4 => InverseSuffixExactMatch::is_single_match(&query_item),
-                        5 => SuffixExactMatch::is_single_match(&query_item),
-                        6 => InverseExactMatch::is_single_match(&query_item),
-                        7 => FuzzyMatch::is_single_match(&query_item),
-                        _ => None,
-                    };
-                    if let Some(token) = token {
-                        match idx {
-                            0 => results.push(Arc::new(ExactMatch::new(token))),
-                            1 => results.push(Arc::new(IncludeMatch::new(token))),
-                            2 => results.push(Arc::new(PrefixExactMatch::new(token))),
-                            3 => results.push(Arc::new(InversePrefixExactMatch::new(token))),
-                            4 => results.push(Arc::new(InverseSuffixExactMatch::new(token))),
-                            5 => results.push(Arc::new(SuffixExactMatch::new(token))),
-                            6 => results.push(Arc::new(InverseExactMatch::new(token))),
-                            7 => results.push(Arc::new(FuzzyMatch::new(token, std::borrow::Cow::Owned(options.clone())))),
-                            _ => {},
-                        }
-                        matched = true;
+                // Single-match
+                for (idx, matcher) in (*SINGLE_MATCHERS).iter().enumerate() {
+                    if let Some(token) = matcher(&query_item) {
+                        results.push(constructors[idx](token, &options));
                         break;
                     }
-                }
-                if matched {
-                    continue;
                 }
             }
 
