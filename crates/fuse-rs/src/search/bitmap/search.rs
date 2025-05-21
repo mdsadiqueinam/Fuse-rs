@@ -21,7 +21,7 @@ pub struct SearchResult {
 pub fn search(
     text: &str,
     pattern: &str,
-    pattern_alphabet: &HashMap<char, u64>,
+    pattern_alphabet: &HashMap<char, u32>,
     options: &FuseOptions,
 ) -> Result<SearchResult, FuseError> {
     // Check pattern length against maximum allowed
@@ -65,7 +65,7 @@ pub fn search(
     // reset the best location
     best_location = usize::MAX; // -1 equivalent in Rust
 
-    let mut last_bit_arr: Vec<u64> = Vec::new();
+    let mut last_bit_arr: Vec<u32> = Vec::new();
     let mut final_score = 1.0;
     let mut bin_max = pattern_length + text_length;
 
@@ -202,20 +202,7 @@ pub fn search(
 mod tests {
     use super::*;
     use std::collections::HashMap;
-
-    // Helper function to create pattern alphabet
-    fn create_pattern_alphabet(pattern: &str) -> HashMap<char, u64> {
-        let pattern_len = pattern.len();
-        let mut mask: HashMap<char, u64> = HashMap::new();
-        
-        for (i, c) in pattern.chars().enumerate() {
-            mask.entry(c)
-                .and_modify(|e| *e |= 1 << (pattern_len - i - 1))
-                .or_insert(1 << (pattern_len - i - 1));
-        }
-        
-        mask
-    }
+    use crate::search::bitmap::create_pattern_alphabet::create_pattern_alphabet;
 
     // Helper to create default options
     fn default_options() -> FuseOptions<'static> {

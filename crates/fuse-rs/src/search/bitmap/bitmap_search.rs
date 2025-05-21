@@ -3,6 +3,7 @@ use std::{borrow::Cow, collections::HashMap};
 use crate::helpers::str_ext::StrExt;
 use crate::search::bitmap::constants::MAX_BITS;
 use crate::search::bitmap::create_pattern_alphabet::create_pattern_alphabet;
+use crate::search::bitmap::search::{search, SearchResult};
 
 struct PatternChunk {
     /// The pattern segment
@@ -83,5 +84,70 @@ impl<'a> BitmapSearch<'a> {
             start_index,
         };
         self.chunks.push(chunk);
+    }
+
+    fn search_in(&self, text: &str) -> SearchResult {
+        let mut text = if self.options.is_case_sensitive {
+            text.to_string()
+        } else {
+            text.to_lowercase()
+        };
+
+        text = if self.options.ignore_diacritics {
+            text.strip_diacritics()
+        } else {
+            text
+        };
+
+        if text == self.pattern {
+            return SearchResult {
+                is_match: true,
+                score: 0f64,
+                indices: if self.options.include_matches {
+                    Some(vec![(0, text.len() - 1)])
+                } else {
+                    None
+                }
+            }
+        };
+
+        let mut all_indices = Vec::new();
+        let mut total_score = 0f64;
+        let mut has_matches = false;
+
+        self.chunks.iter().for_each(|chunk| {
+            // Create a new FuseOptions with updated location for this chunk
+            let mut chunk_options = FuseOptions {
+                location: self.options.location + chunk.start_index,
+                ..(*self.options).clone()
+            };
+            let result = search(&text, &chunk.pattern, &chunk.alphabet, &chunk_options);
+
+            match result { 
+                Ok(val) => {
+                    has_matches = val.is_match;
+                    total_score += val.score;
+                    
+                    if val.is_match && val.indices.is_some() {
+                        let indices = val.indices.unwrap();
+                        all_indices.extend(indices);
+                    }
+                },
+                Err(_) => {
+                    // Handle error if needed
+                    return;
+                }
+            }
+        });
+
+        SearchResult {
+            is_match: has_matches,
+            score: if has_matches { total_score / (self.chunks.len() as f64) } else { 1f64 },
+            indices: if self.options.include_matches && has_matches {
+                Some(all_indices)
+            } else {
+                None
+            }
+        }
     }
 }
