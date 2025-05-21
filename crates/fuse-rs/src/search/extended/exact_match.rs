@@ -52,7 +52,11 @@ impl BaseMatch for ExactMatch {
         SearchResult {
             is_match,
             score: if is_match { 0.0 } else { 1.0 },
-            indices: Some(vec![(0, self.pattern().len().saturating_sub(1))]),
+            indices: if is_match {
+                Some(vec![(0, self.pattern().len().saturating_sub(1))])
+            } else {
+                None
+            },
         }
     }
 }

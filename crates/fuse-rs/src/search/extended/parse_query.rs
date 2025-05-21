@@ -16,7 +16,6 @@ use super::fuzzy_match::FuzzyMatch;
 
 // Regex to split by spaces, but keep anything in quotes together
 lazy_static! {
-    static ref SPACE_RE: Regex = Regex::new(r#" +(?=(?:[^"]*"[^"]*")*[^"]*$)"#).unwrap();
     static ref MULTI_MATCHERS: [fn(&str) -> Option<String>; 8] = [
         ExactMatch::is_multi_match,
         IncludeMatch::is_multi_match,
@@ -48,7 +47,31 @@ pub type MatcherBox<'a> = Arc<dyn BaseMatch + Send + Sync + 'a>;
 
 pub type MatcherFactory<'a> = fn(&str, &FuseOptions<'a>) -> Option<MatcherBox<'a>>;
 
-
+/// Replace unsupported look-ahead regex with a manual split function
+fn split_pattern(pattern: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    for c in pattern.chars() {
+        match c {
+            '"' => {
+                in_quotes = !in_quotes;
+                current.push(c);
+            },
+            ' ' if !in_quotes => {
+                if !current.is_empty() {
+                    result.push(current.clone());
+                    current.clear();
+                }
+            },
+            _ => current.push(c),
+        }
+    }
+    if !current.is_empty() {
+        result.push(current);
+    }
+    result
+}
 
 /// Parse a query string into a structured format for searching
 ///
@@ -60,11 +83,7 @@ pub fn parse_query<'a>(pattern: &str, options: &FuseOptions<'a>) -> Vec<Vec<Matc
         .split(OR_TOKEN)
         .map(|item| {
             let options = options.clone();
-            let query: Vec<String> = SPACE_RE
-                .split(item.trim())
-                .filter(|item| !item.is_empty() && !item.trim().is_empty())
-                .map(|s| s.to_string())
-                .collect();
+            let query: Vec<String> = split_pattern(item.trim());
 
             let mut results: Vec<MatcherBox<'a>> = Vec::new();
 

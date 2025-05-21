@@ -48,11 +48,26 @@ impl BaseMatch for SuffixExactMatch {
 
     fn search(&self, text: &str) -> SearchResult {
         let is_match = text.ends_with(&self.pattern);
-
+        let indices = if is_match {
+            if self.pattern.is_empty() {
+                if text.is_empty() {
+                    vec![(0, 0)]
+                } else {
+                    let last = text.len() - 1;
+                    vec![(last, last)]
+                }
+            } else {
+                let start = text.len().saturating_sub(self.pattern.len());
+                let end = text.len().saturating_sub(1);
+                vec![(start, end)]
+            }
+        } else {
+            vec![]
+        };
         SearchResult {
             is_match,
             score: if is_match { 0.0 } else { 1.0 },
-            indices: Some(vec![(text.len().saturating_sub(self.pattern.len()), text.len().saturating_sub(1))]),
+            indices: if is_match { Some(indices) } else { None },
         }
     }
 }
