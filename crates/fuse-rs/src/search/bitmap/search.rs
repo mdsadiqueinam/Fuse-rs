@@ -2,21 +2,11 @@ use crate::FuseError;
 use crate::FuseOptions;
 use crate::helpers::str_ext::StrExt;
 use std::collections::HashMap;
-
+use crate::search::search_result::SearchResult;
 use super::compute_score::compute_score;
 use super::constants::MAX_BITS;
 use super::convert_mask_to_indices::convert_mask_to_indices;
 
-pub struct SearchResult {
-    /// Whether the pattern was found in the text
-    pub is_match: bool,
-
-    /// The match quality score (lower is better)
-    pub score: f64,
-
-    /// List of match position ranges as (start, end) tuples
-    pub indices: Option<Vec<(usize, usize)>>,
-}
 
 pub fn search(
     text: &str,

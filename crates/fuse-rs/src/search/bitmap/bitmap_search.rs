@@ -3,7 +3,8 @@ use std::{borrow::Cow, collections::HashMap};
 use crate::helpers::str_ext::StrExt;
 use crate::search::bitmap::constants::MAX_BITS;
 use crate::search::bitmap::create_pattern_alphabet::create_pattern_alphabet;
-use crate::search::bitmap::search::{search, SearchResult};
+use crate::search::bitmap::search::{search};
+use crate::search::search_result::SearchResult;
 
 pub struct PatternChunk {
     /// The pattern segment
