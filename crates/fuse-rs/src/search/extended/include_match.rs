@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use crate::helpers::str_ext::StrExt;
 use crate::search::search_result::SearchResult;
 use super::base_match::{BaseMatch};
 
@@ -47,35 +48,21 @@ impl BaseMatch for IncludeMatch {
     }
 
     fn search(&self, text: &str) -> SearchResult {
-        let mut location = 0;
+        let mut location: usize = 0;
         let mut indices = Vec::new();
         let pattern_len = self.pattern.len();
 
-        if pattern_len == 0 {
-            return SearchResult {
-                is_match: true,
-                score: 0.0,
-                indices: Some(vec![(0, 0)]),
-            };
+        while let Some(index) = text.index_of(self.pattern(), Some(location)) {
+            location = index + pattern_len;
+            indices.push((index, location.saturating_sub(1)));
         }
-
-        // Get all exact matches
-        while let Some(index) = text[location..].find(&self.pattern) {
-            let absolute_index = location + index;
-            location = absolute_index + pattern_len;
-            indices.push((absolute_index, absolute_index + pattern_len - 1));
-        }
-
+        
         let is_match = !indices.is_empty();
-
+        
         SearchResult {
             is_match,
             score: if is_match { 0.0 } else { 1.0 },
-            indices: if is_match {
-                Some(indices)
-            } else {
-                None
-            },
+            indices: Some(indices),
         }
     }
 }

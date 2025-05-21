@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -50,13 +51,13 @@ lazy_static::lazy_static! {
 /// ```
 pub struct ExtendedSearch<'a> {
     pattern: String,
-    options: FuseOptions<'a>,
-    query: Option<Vec<Vec<MatcherBox>>>,
+    options: Cow<'a, FuseOptions<'a>>,
+    query: Option<Vec<Vec<MatcherBox<'a>>>>,
 }
 
 impl<'a> ExtendedSearch<'a> {
     /// Create a new ExtendedSearch
-    pub fn new(pattern: String, options: FuseOptions<'a>) -> Self {
+    pub fn new(pattern: String, options: &FuseOptions<'a>) -> Self {
         let pattern = if options.is_case_sensitive {
             pattern
         } else {
@@ -69,11 +70,12 @@ impl<'a> ExtendedSearch<'a> {
             pattern
         };
 
-        let query = parse_query(&pattern, options.clone());
+        let query = parse_query(&pattern, options);
+        let borrowed_options = Cow::Borrowed(options);
 
         Self {
             pattern,
-            options,
+            options: borrowed_options,
             query: Some(query),
         }
     }

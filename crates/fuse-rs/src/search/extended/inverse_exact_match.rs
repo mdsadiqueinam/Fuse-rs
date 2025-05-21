@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use crate::helpers::str_ext::StrExt;
 use crate::search::search_result::SearchResult;
 use super::base_match::{BaseMatch};
 
@@ -47,16 +48,13 @@ impl BaseMatch for InverseExactMatch {
     }
 
     fn search(&self, text: &str) -> SearchResult {
-        let is_match = !text.contains(&self.pattern);
-
+        let index = text.index_of(self.pattern(), None);
+        let is_match = index.is_none();
+        
         SearchResult {
             is_match,
             score: if is_match { 0.0 } else { 1.0 },
-            indices: if is_match {
-                Some(vec![(0, text.len().saturating_sub(1))])
-            } else {
-                None
-            },
+            indices: Some(vec![(0, text.len().saturating_sub(1))]),
         }
     }
 }

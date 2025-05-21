@@ -52,20 +52,7 @@ impl BaseMatch for SuffixExactMatch {
         SearchResult {
             is_match,
             score: if is_match { 0.0 } else { 1.0 },
-            indices: if is_match {
-                if self.pattern.is_empty() {
-                    if text.is_empty() {
-                        Some(vec![(0, 0)])
-                    } else {
-                        Some(vec![(text.len() - 1, text.len() - 1)])
-                    }
-                } else {
-                    let start = text.len() - self.pattern.len();
-                    Some(vec![(start, text.len() - 1)])
-                }
-            } else {
-                None
-            },
+            indices: Some(vec![(text.len().saturating_sub(self.pattern.len()), text.len().saturating_sub(1))]),
         }
     }
 }

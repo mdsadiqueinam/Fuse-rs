@@ -1,1 +1,2 @@
 mod bitmap;
+mod extended;

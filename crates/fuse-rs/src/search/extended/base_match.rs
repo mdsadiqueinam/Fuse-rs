@@ -2,7 +2,7 @@ use regex::Regex;
 use crate::search::search_result::SearchResult;
 
 /// Base trait for all match types
-pub trait BaseMatch {
+pub trait BaseMatch: Send + Sync {
     /// Get the pattern being matched
     fn pattern(&self) -> &str;
 
@@ -26,23 +26,7 @@ pub trait BaseMatch {
     fn get_type(&self) -> &'static str;
 
     /// Search for the pattern in the given text
-    fn search(&self, text: &str) -> SearchResult {
-        let is_match = text.starts_with(self.pattern());
-
-        SearchResult {
-            is_match,
-            score: if is_match { 0.0 } else { 1.0 },
-            indices: if is_match {
-                if self.pattern().is_empty() {
-                    Some(vec![(0, 0)])
-                } else {
-                    Some(vec![(0, self.pattern().len() - 1)])
-                }
-            } else {
-                None
-            },
-        }
-    }
+    fn search(&self, text: &str) -> SearchResult;
 }
 
 /// Helper function to extract matches from a regex

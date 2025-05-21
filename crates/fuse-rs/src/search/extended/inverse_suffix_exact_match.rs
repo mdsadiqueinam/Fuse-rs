@@ -52,11 +52,7 @@ impl BaseMatch for InverseSuffixExactMatch {
         SearchResult {
             is_match,
             score: if is_match { 0.0 } else { 1.0 },
-            indices: if is_match {
-                Some(vec![(0, text.len().saturating_sub(1))])
-            } else {
-                None
-            },
+            indices: Some(vec![(0, text.len().saturating_sub(1))]),
         }
     }
 }
