@@ -30,9 +30,9 @@ const DEFAULT_NGRAM_SIZE: usize = 3;
 pub struct FuseIndex<'a> {
     norm: Norm,
     get_fn: GetFn,
-    records: FuseIndexRecords,
-    keys: Vec<Key<'a>>,
-    keys_map: HashMap<String, usize>,
+    pub records: FuseIndexRecords,
+    pub keys: Vec<Key<'a>>,
+    pub keys_map: HashMap<String, usize>,
 }
 
 //----------------------------------------------------------------------
@@ -213,7 +213,7 @@ impl<'a> FuseIndex<'a> {
         sub_records
     }
 
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.records.len()
     }
 

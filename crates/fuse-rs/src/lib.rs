@@ -9,10 +9,10 @@
 //! scoring, and result sorting.
 
 // Internal module structure
-mod helpers;
-mod core;
-mod tools;
-mod search;
+pub mod helpers;
+pub mod core;
+pub mod tools;
+pub mod search;
 
 //----------------------------------------------------------------------
 // Public API Exports

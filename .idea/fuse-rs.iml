@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/fuse-rs/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/fuse-wasm/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/fuse-rs/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

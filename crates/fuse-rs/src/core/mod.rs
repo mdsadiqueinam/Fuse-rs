@@ -4,16 +4,16 @@
 //! including configuration options, result handling, and the primary search algorithm.
 
 // Configuration options
-pub(crate) mod options;
+pub mod options;
 
 // Search result types and handlers
-pub(crate) mod results;
+pub mod results;
 
 // Scoring functions
-pub(crate) mod compute_score;
+pub mod compute_score;
 
 // Error messages
-pub(crate) mod error_messages;
+pub mod error_messages;
 
 // Main search implementation
-pub(crate) mod fuse;
+pub mod fuse;

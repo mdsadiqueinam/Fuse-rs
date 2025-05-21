@@ -62,7 +62,7 @@ impl StrExt for str {
     fn strip_diacritics(&self) -> String {
         // First decompose the string into base characters and combining marks
         let result = self.nfd().collect::<String>();
-        
+
         // Then remove all the combining marks
         DIACRITICS_REGEX.replace_all(&result, "").to_string()
     }
@@ -73,49 +73,6 @@ impl StrExt for str {
         let from = from.unwrap_or(0);
         // Ensure the starting position is within bounds
         self[from..].find(needle).map(|i| i + from)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_strip_diacritics_basic() {
-        let input = "café naïve résumé";
-        let expected = "cafe naive resume";
-        assert_eq!(input.strip_diacritics(), expected);
-    }
-
-    #[test]
-    fn test_strip_diacritics_mixed() {
-        let input = "Crème brûlée – déjà vu";
-        let expected = "Creme brulee – deja vu";
-        assert_eq!(input.strip_diacritics(), expected);
-    }
-
-    #[test]
-    fn test_strip_diacritics_no_diacritics() {
-        let input = "hello world";
-        let expected = "hello world";
-        assert_eq!(input.strip_diacritics(), expected);
-    }
-
-    #[test]
-    fn test_strip_diacritics_empty() {
-        let input = "";
-        let expected = "";
-        assert_eq!(input.strip_diacritics(), expected);
-    }
-
-    #[test]
-    fn test_index_of() {
-        let input = "hello world".to_string();
-        assert_eq!(input.index_of("world", Some(0)), Some(6));
-        assert_eq!(input.index_of("hello", Some(0)), Some(0));
-        assert_eq!(input.index_of("o", Some(4)), Some(4));
-        assert_eq!(input.index_of("x", Some(0)), None);
-        assert_eq!(input.index_of("world", Some(7)), None);
     }
 }
 

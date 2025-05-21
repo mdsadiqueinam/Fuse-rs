@@ -4,7 +4,7 @@
 //! the main fuzzy search implementation.
 
 // Path and property access utilities
-pub(crate) mod get;
+pub mod get;
 
 // Text normalization utilities
-pub(crate) mod str_ext;
+pub mod str_ext;

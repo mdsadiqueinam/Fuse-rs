@@ -1,1 +1,1 @@
-pub(crate) mod bitmap;
+pub mod bitmap;
