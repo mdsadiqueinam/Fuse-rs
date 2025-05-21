@@ -45,7 +45,8 @@ lazy_static::lazy_static! {
 /// or`py`.
 ///
 /// ```
-/// ^core go$ | rb$ | py$
+/// let pattern = "^core go$ | rb$ | py$";
+/// // This pattern would match entries that start with `core` and end with either `go`, `rb`, or `py`
 /// ```
 pub struct ExtendedSearch<'a> {
     pattern: String,

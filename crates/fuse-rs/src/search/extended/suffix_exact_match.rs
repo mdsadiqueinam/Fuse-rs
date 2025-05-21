@@ -53,8 +53,16 @@ impl BaseMatch for SuffixExactMatch {
             is_match,
             score: if is_match { 0.0 } else { 1.0 },
             indices: if is_match {
-                let start = text.len() - self.pattern.len();
-                Some(vec![(start, text.len() - 1)])
+                if self.pattern.is_empty() {
+                    if text.is_empty() {
+                        Some(vec![(0, 0)])
+                    } else {
+                        Some(vec![(text.len() - 1, text.len() - 1)])
+                    }
+                } else {
+                    let start = text.len() - self.pattern.len();
+                    Some(vec![(start, text.len() - 1)])
+                }
             } else {
                 None
             },

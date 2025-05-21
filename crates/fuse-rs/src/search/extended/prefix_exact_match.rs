@@ -42,17 +42,7 @@ impl BaseMatch for PrefixExactMatch {
         &SINGLE_REGEX
     }
 
-    fn search(&self, text: &str) -> SearchResult {
-        let is_match = text.starts_with(&self.pattern);
-
-        SearchResult {
-            is_match,
-            score: if is_match { 0.0 } else { 1.0 },
-            indices: if is_match {
-                Some(vec![(0, self.pattern.len() - 1)])
-            } else {
-                None
-            },
-        }
+    fn get_type(&self) -> &'static str {
+        Self::get_type()
     }
 }

@@ -51,6 +51,14 @@ impl BaseMatch for IncludeMatch {
         let mut indices = Vec::new();
         let pattern_len = self.pattern.len();
 
+        if pattern_len == 0 {
+            return SearchResult {
+                is_match: true,
+                score: 0.0,
+                indices: Some(vec![(0, 0)]),
+            };
+        }
+
         // Get all exact matches
         while let Some(index) = text[location..].find(&self.pattern) {
             let absolute_index = location + index;

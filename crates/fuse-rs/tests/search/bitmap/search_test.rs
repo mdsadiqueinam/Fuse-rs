@@ -1,7 +1,6 @@
-use fuse_rs::FuseOptions;
-use fuse_rs::search::bitmap::search::{search, SearchResult};
 use fuse_rs::search::bitmap::create_pattern_alphabet::create_pattern_alphabet;
-use std::collections::HashMap;
+use fuse_rs::search::bitmap::search::search;
+use fuse_rs::FuseOptions;
 
 // Helper to create default options
 fn default_options() -> FuseOptions<'static> {
