@@ -57,25 +57,24 @@ pub struct ExtendedSearch<'a> {
 
 impl<'a> ExtendedSearch<'a> {
     /// Create a new ExtendedSearch
-    pub fn new(pattern: String, options: &FuseOptions<'a>) -> Self {
-        let pattern = if options.is_case_sensitive {
+    pub fn new(pattern: String, options: Cow<'a, FuseOptions<'a>>) -> Self {
+        let mut pattern = if options.is_case_sensitive {
             pattern
         } else {
             pattern.to_lowercase()
         };
 
-        let pattern = if options.ignore_diacritics {
+        pattern = if options.ignore_diacritics {
             pattern.strip_diacritics()
         } else {
             pattern
         };
 
-        let query = parse_query(&pattern, options);
-        let borrowed_options = Cow::Borrowed(options);
+        let query = parse_query(&pattern, &options);
 
         Self {
             pattern,
-            options: borrowed_options,
+            options,
             query: Some(query),
         }
     }
@@ -98,24 +97,29 @@ impl<'a> ExtendedSearch<'a> {
             }
         };
 
-        let text = if self.options.is_case_sensitive {
+        let mut text = if self.options.is_case_sensitive {
             text.to_string()
         } else {
             text.to_lowercase()
         };
 
-        let text = if self.options.ignore_diacritics {
+        text = if self.options.ignore_diacritics {
             text.strip_diacritics()
         } else {
             text
         };
 
+        let mut all_indices = Vec::new();
+        let mut num_matches: usize = 0;
+        let mut total_score = 0.0;
+
         // ORs
         for searchers in query {
-            let mut all_indices = Vec::new();
-            let mut num_matches = 0;
-            let mut total_score = 0.0;
-
+            
+            //reset indices and num_matches
+            all_indices.clear();
+            num_matches = 0;
+            
             // ANDs
             for searcher in searchers {
                 let result = searcher.search(&text);
@@ -149,7 +153,11 @@ impl<'a> ExtendedSearch<'a> {
                 return SearchResult {
                     is_match: true,
                     score: total_score / num_matches as f64,
-                    indices: Some(all_indices),
+                    indices: if self.options.include_matches { 
+                        Some(all_indices)
+                    } else {
+                        None
+                    },
                 };
             }
         }

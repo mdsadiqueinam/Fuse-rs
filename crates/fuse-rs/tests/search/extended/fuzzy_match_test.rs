@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use fuse_rs::FuseOptions;
 use fuse_rs::search::extended::fuzzy_match::FuzzyMatch;
 use fuse_rs::search::extended::base_match::BaseMatch;
@@ -6,7 +7,7 @@ use fuse_rs::search::extended::base_match::BaseMatch;
 fn test_new_fuzzy_match() {
     let pattern = "test";
     let options = FuseOptions::default();
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
 
     assert_eq!(fuzzy_match.pattern(), pattern);
     assert_eq!(FuzzyMatch::get_type(), "fuzzy");
@@ -49,7 +50,7 @@ fn test_search_exact_match() {
     let pattern = "world";
     let mut options = FuseOptions::default();
     options.include_matches = true; // Ensure indices are included
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
 
     // Test exact match
     let text = "world";
@@ -73,7 +74,7 @@ fn test_search_exact_match() {
 fn test_search_fuzzy_match() {
     let pattern = "wrld";
     let options = FuseOptions::default();
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
 
     // Test fuzzy match
     let text = "world";
@@ -91,7 +92,7 @@ fn test_search_fuzzy_match() {
 fn test_search_no_match() {
     let pattern = "xyz";
     let options = FuseOptions::default();
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
 
     // Test no match
     let text = "hello";
@@ -108,7 +109,7 @@ fn test_search_empty_pattern() {
     // So we'll just check that the search method doesn't crash
     let pattern = "";
     let options = FuseOptions::default();
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
 
     // Empty pattern with non-empty text
     let text = "hello";
@@ -126,7 +127,7 @@ fn test_search_with_options() {
 
     // Test with default options
     let options = FuseOptions::default();
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
     let result = fuzzy_match.search(text);
     assert!(result.is_match);
     let default_score = result.score;
@@ -134,14 +135,14 @@ fn test_search_with_options() {
     // Test with higher threshold (more lenient)
     let mut options = FuseOptions::default();
     options.threshold = 0.8;
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
     let result = fuzzy_match.search(text);
     assert!(result.is_match);
 
     // Test with lower threshold (more strict)
     let mut options = FuseOptions::default();
     options.threshold = 0.1;
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
     let result = fuzzy_match.search(text);
     // This might not match depending on how strict the threshold is
     // So we don't assert on is_match
@@ -149,7 +150,7 @@ fn test_search_with_options() {
     // Test with include_matches
     let mut options = FuseOptions::default();
     options.include_matches = true;
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
     let result = fuzzy_match.search(text);
     assert!(result.is_match);
     assert!(result.indices.is_some());
@@ -163,14 +164,14 @@ fn test_search_case_sensitivity() {
 
     // Test with case insensitive (default)
     let options = FuseOptions::default();
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
     let result = fuzzy_match.search(text);
     assert!(result.is_match);
 
     // Test with case sensitive
     let mut options = FuseOptions::default();
     options.is_case_sensitive = true;
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
     let result = fuzzy_match.search(text);
     assert!(!result.is_match);
 }
@@ -183,14 +184,14 @@ fn test_search_with_diacritics() {
     // Test with ignore diacritics (default)
     let mut options = FuseOptions::default();
     options.ignore_diacritics = true;
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
     let result = fuzzy_match.search(text);
     assert!(result.is_match);
 
     // Test without ignoring diacritics
     let mut options = FuseOptions::default();
     options.ignore_diacritics = false;
-    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), options);
+    let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
     let result = fuzzy_match.search(text);
     assert!(!result.is_match);
 }
