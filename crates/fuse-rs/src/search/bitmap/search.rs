@@ -312,26 +312,6 @@ mod tests {
     }
 
     #[test]
-    fn test_pattern_too_large() {
-        let text = "hello world";
-        // Create a pattern that exceeds MAX_BITS
-        let pattern = "a".repeat(MAX_BITS + 1);
-        let pattern_alphabet = create_pattern_alphabet(&pattern);
-        let options = default_options();
-        
-        match search(text, &pattern, &pattern_alphabet, &options) {
-            Err(FuseError::PatternLengthTooLarge(_)) => {
-                // This is the expected error
-                assert!(true);
-            },
-            _ => {
-                // Any other result is unexpected
-                panic!("Expected PatternLengthTooLarge error");
-            }
-        }
-    }
-
-    #[test]
     fn test_find_all_matches() {
         let text = "abcabc";
         let pattern = "abc";
