@@ -109,7 +109,7 @@ pub fn search(
                 None => None,
             };
 
-            if compute_matches {
+            if compute_matches && current_location < match_mask.len() {
                 // Speed up: quick bool to int conversion (i.e, `charMatch ? 1 : 0`)
                 match_mask[current_location] = if char_match.is_some() { 1 } else { 0 };
             }
@@ -187,4 +187,3 @@ pub fn search(
 
     Ok(result)
 }
-

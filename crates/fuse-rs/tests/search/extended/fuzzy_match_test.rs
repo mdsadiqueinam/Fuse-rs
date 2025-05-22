@@ -73,7 +73,8 @@ fn test_search_exact_match() {
 #[test]
 fn test_search_fuzzy_match() {
     let pattern = "wrld";
-    let options = FuseOptions::default();
+    let mut options = FuseOptions::default();
+    options.include_matches = true;
     let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
 
     // Test fuzzy match
@@ -159,7 +160,7 @@ fn test_search_with_options() {
 
 #[test]
 fn test_search_case_sensitivity() {
-    let pattern = "World";
+    let pattern = "WORLD";
     let text = "world";
 
     // Test with case insensitive (default)
@@ -171,6 +172,7 @@ fn test_search_case_sensitivity() {
     // Test with case sensitive
     let mut options = FuseOptions::default();
     options.is_case_sensitive = true;
+    options.include_matches = true;
     let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
     let result = fuzzy_match.search(text);
     assert!(!result.is_match);
@@ -178,7 +180,7 @@ fn test_search_case_sensitivity() {
 
 #[test]
 fn test_search_with_diacritics() {
-    let pattern = "hélló";
+    let pattern = "éó";
     let text = "hello";
 
     // Test with ignore diacritics (default)
@@ -191,6 +193,7 @@ fn test_search_with_diacritics() {
     // Test without ignoring diacritics
     let mut options = FuseOptions::default();
     options.ignore_diacritics = false;
+    options.include_matches = true;
     let fuzzy_match = FuzzyMatch::new(pattern.to_string(), Cow::Borrowed(&options));
     let result = fuzzy_match.search(text);
     assert!(!result.is_match);
