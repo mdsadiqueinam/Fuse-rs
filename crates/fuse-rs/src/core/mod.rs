@@ -17,3 +17,5 @@ pub mod error_messages;
 
 // Main search implementation
 pub mod fuse;
+pub mod query_parser;
+mod register;
