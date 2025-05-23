@@ -9,3 +9,7 @@ pub struct SearchResult {
     /// List of match position ranges as (start, end) tuples
     pub indices: Option<Vec<(usize, usize)>>,
 }
+
+pub trait Searcher {
+    fn search_in(&self, text: &str) -> SearchResult;
+}

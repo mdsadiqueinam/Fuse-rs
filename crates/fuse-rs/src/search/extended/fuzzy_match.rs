@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use super::base_match::BaseMatch;
 use crate::search::bitmap::bitmap_search::BitmapSearch;
-use crate::search::search_result::SearchResult;
+use crate::search::search::{SearchResult, Searcher};
 use crate::FuseOptions;
 
 /// Fuzzy match implementation

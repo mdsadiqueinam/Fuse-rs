@@ -105,7 +105,6 @@ pub fn parse_query<'a>(pattern: &str, options: &FuseOptions<'a>) -> Vec<Vec<Matc
                     if let Some(token) = matcher(&query_item) {
                         results.push(constructors[idx](token, &options));
                         found = true;
-                        break;
                     }
                 }
 

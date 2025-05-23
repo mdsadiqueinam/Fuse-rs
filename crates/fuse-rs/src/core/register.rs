@@ -1,47 +1,33 @@
 use std::borrow::Cow;
-use std::sync::Mutex;
-use once_cell::sync::Lazy;
+use std::sync::{Mutex, OnceLock};
 use crate::FuseOptions;
 use crate::search::bitmap::bitmap_search::BitmapSearch;
-use crate::search::extended::ExtendedSearch;
-use crate::search::search_result::SearchResult;
+use crate::search::search::Searcher;
 
-pub trait Searcher {
-    fn search_in(&self, text: &str) -> SearchResult;
-}
+// Constructor type for a searcher
+pub type SearcherConstructor = fn(String, FuseOptions<'static>) -> Box<dyn Searcher>;
 
-impl Searcher for BitmapSearch<'static> {
-    fn search_in(&self, text: &str) -> SearchResult {
-        BitmapSearch::search_in(self, text)
-    }
-}
+// Condition type for a searcher
+pub type SearcherCondition = fn(&str, &FuseOptions) -> bool;
 
-impl Searcher for ExtendedSearch<'static> {
-    fn search_in(&self, text: &str) -> SearchResult {
-        ExtendedSearch::search_in(self, text)
-    }
-}
+// Registry: Vec of (condition, constructor)
+static REGISTERED_SEARCHERS: OnceLock<Mutex<Vec<(SearcherCondition, SearcherConstructor)>>> = OnceLock::new();
 
-type SearcherFactory = fn(pattern: String, options: FuseOptions<'static>) -> Box<dyn Searcher>;
-
-static REGISTERED_SEARCHERS: Lazy<Mutex<Vec<(fn(&str, &FuseOptions) -> bool, SearcherFactory)>>> = Lazy::new(|| Mutex::new(Vec::new()));
-
-pub fn register(
-    condition: fn(&str, &FuseOptions) -> bool,
-    factory: SearcherFactory,
-) {
-    let mut reg = REGISTERED_SEARCHERS.lock().unwrap();
-    reg.push((condition, factory));
+pub fn register(condition: SearcherCondition, constructor: SearcherConstructor) {
+    let reg = REGISTERED_SEARCHERS.get_or_init(|| Mutex::new(Vec::new()));
+    let mut reg_mut = reg.lock().unwrap();
+    reg_mut.push((condition, constructor));
 }
 
 pub fn create_searcher(
     pattern: String,
     options: FuseOptions<'static>,
 ) -> Box<dyn Searcher> {
-    let reg = REGISTERED_SEARCHERS.lock().unwrap();
-    for (condition, factory) in reg.iter() {
+    let reg = REGISTERED_SEARCHERS.get_or_init(|| Mutex::new(Vec::new()));
+    let reg = reg.lock().unwrap();
+    for (condition, constructor) in reg.iter() {
         if condition(&pattern, &options) {
-            return factory(pattern.clone(), options.clone());
+            return constructor(pattern.clone(), options.clone());
         }
     }
     Box::new(BitmapSearch::new(Cow::Owned(pattern), Cow::Owned(options)))

@@ -16,7 +16,7 @@ impl BaseMatch for Dummy {
         &REGEX
     }
     fn get_type(&self) -> &'static str { "dummy" }
-    fn search(&self, _: &str) -> fuse_rs::search::search_result::SearchResult { unimplemented!() }
+    fn search(&self, _: &str) -> fuse_rs::search::search::SearchResult { unimplemented!() }
 }
 
 #[test]

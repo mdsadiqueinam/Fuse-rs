@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use crate::search::search_result::SearchResult;
+use crate::search::search::SearchResult;
 use super::base_match::{BaseMatch};
 
 /// Exact match implementation

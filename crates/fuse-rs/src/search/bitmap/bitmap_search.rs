@@ -4,7 +4,7 @@ use crate::helpers::str_ext::StrExt;
 use crate::search::bitmap::constants::MAX_BITS;
 use crate::search::bitmap::create_pattern_alphabet::create_pattern_alphabet;
 use crate::search::bitmap::search::{search};
-use crate::search::search_result::SearchResult;
+use crate::search::search::{SearchResult, Searcher};
 
 pub struct PatternChunk {
     /// The pattern segment
@@ -87,7 +87,11 @@ impl<'a> BitmapSearch<'a> {
         self.chunks.push(chunk);
     }
 
-    pub fn search_in(&self, text: &str) -> SearchResult {
+
+}
+
+impl<'a> Searcher for BitmapSearch<'a> {
+    fn search_in(&self, text: &str) -> SearchResult {
         let mut text = if self.options.is_case_sensitive {
             text.to_string()
         } else {
@@ -124,7 +128,7 @@ impl<'a> BitmapSearch<'a> {
             };
             let result = search(&text, &chunk.pattern, &chunk.alphabet, &chunk_options);
 
-            match result { 
+            match result {
                 Ok(val) => {
                     has_matches = val.is_match;
                     total_score += val.score;

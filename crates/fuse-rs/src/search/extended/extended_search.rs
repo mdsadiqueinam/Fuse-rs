@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::FuseOptions;
 use crate::helpers::str_ext::StrExt;
-use crate::search::search_result::SearchResult;
+use crate::search::search::SearchResult;
 use super::base_match::{BaseMatch};
 use super::fuzzy_match::FuzzyMatch;
 use super::include_match::IncludeMatch;

@@ -2,7 +2,7 @@ use crate::FuseError;
 use crate::FuseOptions;
 use crate::helpers::str_ext::StrExt;
 use std::collections::HashMap;
-use crate::search::search_result::SearchResult;
+use crate::search::search::SearchResult;
 use super::compute_score::compute_score;
 use super::constants::MAX_BITS;
 use super::convert_mask_to_indices::convert_mask_to_indices;

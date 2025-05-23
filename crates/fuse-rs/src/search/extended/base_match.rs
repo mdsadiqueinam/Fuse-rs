@@ -1,5 +1,5 @@
 use regex::Regex;
-use crate::search::search_result::SearchResult;
+use crate::search::search::SearchResult;
 
 /// Base trait for all match types
 pub trait BaseMatch: Send + Sync {

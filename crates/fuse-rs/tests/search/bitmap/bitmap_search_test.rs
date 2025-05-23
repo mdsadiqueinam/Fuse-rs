@@ -2,6 +2,7 @@ use fuse_rs::FuseOptions;
 use fuse_rs::search::bitmap::bitmap_search::BitmapSearch;
 use fuse_rs::search::bitmap::constants::MAX_BITS;
 use std::borrow::Cow;
+use fuse_rs::search::search::Searcher;
 
 // Helper to create default options
 fn default_options<'a>() -> Cow<'a, FuseOptions<'a>> {

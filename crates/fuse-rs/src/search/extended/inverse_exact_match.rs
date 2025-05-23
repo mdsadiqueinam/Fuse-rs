@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use crate::helpers::str_ext::StrExt;
-use crate::search::search_result::SearchResult;
+use crate::search::search::SearchResult;
 use super::base_match::{BaseMatch};
 
 /// Inverse exact match implementation
