@@ -1,24 +1,16 @@
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::sync::OnceLock;
 
 use crate::FuseOptions;
 use crate::helpers::str_ext::StrExt;
 use crate::search::search::SearchResult;
-use super::base_match::{BaseMatch};
 use super::fuzzy_match::FuzzyMatch;
 use super::include_match::IncludeMatch;
 use super::parse_query::{parse_query, MatcherBox};
 
 // Set of match types that can return multiple matches
-lazy_static::lazy_static! {
-    static ref MULTI_MATCH_SET: HashSet<&'static str> = {
-        let mut set = HashSet::new();
-        set.insert(FuzzyMatch::get_type());
-        set.insert(IncludeMatch::get_type());
-        set
-    };
-}
+static MULTI_MATCH_SET: OnceLock<HashSet<&'static str>> = OnceLock::new();
 
 /// Extended search implementation
 ///
@@ -133,7 +125,13 @@ impl<'a> ExtendedSearch<'a> {
                         let searcher_type = searcher.get_type();
 
                         if let Some(indices) = result.indices {
-                            if MULTI_MATCH_SET.contains(searcher_type) {
+                            let multi_match_set = MULTI_MATCH_SET.get_or_init(|| {
+                                let mut set = HashSet::new();
+                                set.insert(FuzzyMatch::get_type());
+                                set.insert(IncludeMatch::get_type());
+                                set
+                            });
+                            if multi_match_set.contains(searcher_type) {
                                 all_indices.extend(indices);
                             } else if !indices.is_empty() {
                                 all_indices.push(indices[0]);

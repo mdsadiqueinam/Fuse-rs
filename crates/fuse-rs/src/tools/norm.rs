@@ -5,17 +5,14 @@
 //! that field length is appropriately factored into relevance scoring.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
-use lazy_static::lazy_static;
+use std::sync::{Mutex, OnceLock};
 
 //----------------------------------------------------------------------
 // Constants & Statics
 //----------------------------------------------------------------------
 
-lazy_static! {
-    /// Regular expression to split text into tokens by whitespace
-    static ref SPACE_REGEX: regex::Regex = regex::Regex::new(r"\s+").unwrap();
-}
+/// Regular expression to split text into tokens by whitespace
+static SPACE_REGEX: OnceLock<regex::Regex> = OnceLock::new();
 
 //----------------------------------------------------------------------
 // Normalization Implementation
@@ -82,7 +79,8 @@ impl Norm {
     /// A normalization factor as a float value
     pub fn get(&self, value: &str) -> f64 {
         // Count non-empty tokens in the string
-        let num_tokens = SPACE_REGEX
+        let space_regex = SPACE_REGEX.get_or_init(|| regex::Regex::new(r"\s+").unwrap());
+        let num_tokens = space_regex
             .split(value.trim())
             .filter(|s| !s.is_empty())
             .count();

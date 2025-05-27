@@ -1,6 +1,4 @@
-use std::sync::Arc;
-use regex::Regex;
-use lazy_static::lazy_static;
+use std::sync::{Arc, OnceLock};
 
 use crate::FuseOptions;
 
@@ -15,28 +13,8 @@ use super::inverse_exact_match::InverseExactMatch;
 use super::fuzzy_match::FuzzyMatch;
 
 // Regex to split by spaces, but keep anything in quotes together
-lazy_static! {
-    static ref MULTI_MATCHERS: [fn(&str) -> Option<String>; 8] = [
-        ExactMatch::is_multi_match,
-        IncludeMatch::is_multi_match,
-        PrefixExactMatch::is_multi_match,
-        InversePrefixExactMatch::is_multi_match,
-        InverseSuffixExactMatch::is_multi_match,
-        SuffixExactMatch::is_multi_match,
-        InverseExactMatch::is_multi_match,
-        FuzzyMatch::is_multi_match,
-    ];
-    static ref SINGLE_MATCHERS: [fn(&str) -> Option<String>; 8] = [
-        ExactMatch::is_single_match,
-        IncludeMatch::is_single_match,
-        PrefixExactMatch::is_single_match,
-        InversePrefixExactMatch::is_single_match,
-        InverseSuffixExactMatch::is_single_match,
-        SuffixExactMatch::is_single_match,
-        InverseExactMatch::is_single_match,
-        FuzzyMatch::is_single_match,
-    ];
-}
+static MULTI_MATCHERS: OnceLock<[fn(&str) -> Option<String>; 8]> = OnceLock::new();
+static SINGLE_MATCHERS: OnceLock<[fn(&str) -> Option<String>; 8]> = OnceLock::new();
 
 const OR_TOKEN: &str = "|";
 
@@ -101,7 +79,17 @@ pub fn parse_query<'a>(pattern: &str, options: &FuseOptions<'a>) -> Vec<Vec<Matc
 
                 // Multi-match
                 let mut found = false;
-                for (idx, matcher) in (*MULTI_MATCHERS).iter().enumerate() {
+                let multi_matchers = MULTI_MATCHERS.get_or_init(|| [
+                    ExactMatch::is_multi_match,
+                    IncludeMatch::is_multi_match,
+                    PrefixExactMatch::is_multi_match,
+                    InversePrefixExactMatch::is_multi_match,
+                    InverseSuffixExactMatch::is_multi_match,
+                    SuffixExactMatch::is_multi_match,
+                    InverseExactMatch::is_multi_match,
+                    FuzzyMatch::is_multi_match,
+                ]);
+                for (idx, matcher) in multi_matchers.iter().enumerate() {
                     if let Some(token) = matcher(&query_item) {
                         results.push(constructors[idx](token, &options));
                         found = true;
@@ -113,7 +101,17 @@ pub fn parse_query<'a>(pattern: &str, options: &FuseOptions<'a>) -> Vec<Vec<Matc
                 }
 
                 // Single-match
-                for (idx, matcher) in (*SINGLE_MATCHERS).iter().enumerate() {
+                let single_matchers = SINGLE_MATCHERS.get_or_init(|| [
+                    ExactMatch::is_single_match,
+                    IncludeMatch::is_single_match,
+                    PrefixExactMatch::is_single_match,
+                    InversePrefixExactMatch::is_single_match,
+                    InverseSuffixExactMatch::is_single_match,
+                    SuffixExactMatch::is_single_match,
+                    InverseExactMatch::is_single_match,
+                    FuzzyMatch::is_single_match,
+                ]);
+                for (idx, matcher) in single_matchers.iter().enumerate() {
                     if let Some(token) = matcher(&query_item) {
                         results.push(constructors[idx](token, &options));
                         break;

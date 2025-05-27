@@ -1,5 +1,5 @@
-use lazy_static::lazy_static;
 use regex::Regex;
+use std::sync::OnceLock;
 use crate::search::search::SearchResult;
 use super::base_match::{BaseMatch};
 
@@ -23,23 +23,20 @@ impl SuffixExactMatch {
     }
 }
 
+static MULTI_REGEX: OnceLock<Regex> = OnceLock::new();
+static SINGLE_REGEX: OnceLock<Regex> = OnceLock::new();
+
 impl BaseMatch for SuffixExactMatch {
     fn pattern(&self) -> &str {
         &self.pattern
     }
 
     fn multi_regex() -> &'static Regex {
-        lazy_static! {
-            static ref MULTI_REGEX: Regex = Regex::new(r#"^"(.*)"\$$"#).unwrap();
-        }
-        &MULTI_REGEX
+        MULTI_REGEX.get_or_init(|| Regex::new(r#"^"(.*)"\$$"#).unwrap())
     }
 
     fn single_regex() -> &'static Regex {
-        lazy_static! {
-            static ref SINGLE_REGEX: Regex = Regex::new(r"^(.*)\$$").unwrap();
-        }
-        &SINGLE_REGEX
+        SINGLE_REGEX.get_or_init(|| Regex::new(r"^(.*)\$$").unwrap())
     }
 
     fn get_type(&self) -> &'static str {
