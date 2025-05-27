@@ -1,6 +1,6 @@
 // Tests for BaseMatch trait helper functions
 use fuse_rs::search::extended::base_match::BaseMatch;
-use once_cell::sync::Lazy;
+use std::sync::OnceLock;
 use regex::Regex;
 
 struct Dummy;
@@ -8,12 +8,12 @@ struct Dummy;
 impl BaseMatch for Dummy {
     fn pattern(&self) -> &str { "" }
     fn multi_regex() -> &'static Regex {
-        static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^=(.*)$").unwrap());
-        &REGEX
+        static REGEX: OnceLock<Regex> = OnceLock::new();
+        REGEX.get_or_init(|| Regex::new(r"^=(.*)$").unwrap())
     }
     fn single_regex() -> &'static Regex {
-        static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^=(.*)$").unwrap());
-        &REGEX
+        static REGEX: OnceLock<Regex> = OnceLock::new();
+        REGEX.get_or_init(|| Regex::new(r"^=(.*)$").unwrap())
     }
     fn get_type(&self) -> &'static str { "dummy" }
     fn search(&self, _: &str) -> fuse_rs::search::search::SearchResult { unimplemented!() }
