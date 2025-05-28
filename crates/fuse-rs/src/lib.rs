@@ -27,6 +27,16 @@ pub use crate::core::options::sort::FuseSortFunction;
 // Error types
 pub use crate::core::error_messages::FuseError;
 
+// Query parser types
+pub use crate::core::query_parser::{
+    Expression, 
+    LeafNode, 
+    LogicalNode, 
+    ParsedExpression, 
+    ParseOptions, 
+    parse
+};
+
 // Search results
 pub use crate::core::results::search_result::{
     RangeTuple,
