@@ -42,6 +42,7 @@ impl<'a> Fuse<'a> {
     pub fn new(docs: &[Value], options: &FuseOptions<'a>, index: Option<FuseIndex<'a>>) -> Self {
         let cloned_options = options.clone();
         let key_store = KeyStore::new(&cloned_options.keys);
+
         let fuse_index = if let Some(f_index) = index {
             f_index
         } else {
@@ -60,6 +61,42 @@ impl<'a> Fuse<'a> {
             index: fuse_index,
         }
     }
+
+    pub fn add(&mut self, doc: &Value) {
+        self.docs.push(doc.clone());
+        self.index.add(doc);
+    }
+
+    pub fn remove(&mut self, predicate: impl Fn(&Value, usize) -> bool) -> Vec<Value> {
+        let mut indices_to_remove: Vec<usize> = Vec::new();
+        for (index, doc) in self.docs.iter().enumerate() {
+            if predicate(doc, index) {
+                indices_to_remove.push(index);
+            }
+        }
+
+        let mut result: Vec<Value> = Vec::new();
+
+        for index in indices_to_remove.iter().rev() {
+            let removed = self.remove_at(*index);
+            if let Ok(doc) = removed {
+                result.push(doc);
+            }
+        }
+        
+        return result;
+    }
+
+    pub fn remove_at(&mut self, index: usize) -> Result<Value, FuseError> {
+        if index < self.docs.len() {
+            let removed_doc = self.docs.remove(index);
+            self.index.remove_at(index);
+            Ok(removed_doc)
+        } else {
+            Err(FuseError::IndexOutOfBounds)
+        }
+    }
+
 
     /// Searches the data using the provided search term.
     ///

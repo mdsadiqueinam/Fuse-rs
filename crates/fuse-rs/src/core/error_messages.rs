@@ -29,6 +29,9 @@ pub enum FuseError {
     
     /// A key's weight property has an invalid value
     InvalidKeyWeightValue(String),
+
+    /// Index out of bounds error
+    IndexOutOfBounds,
 }
 
 impl fmt::Display for FuseError {
@@ -41,6 +44,7 @@ impl fmt::Display for FuseError {
             Self::PatternLengthTooLarge(max) => write!(f, "Pattern length exceeds max of {}.", max),
             Self::MissingKeyProperty(name) => write!(f, "Missing {} property in key", name),
             Self::InvalidKeyWeightValue(key) => write!(f, "Property 'weight' in key '{}' must be a positive integer", key),
+            Self::IndexOutOfBounds => write!(f, "Index out of bounds"),
         }
     }
 }
